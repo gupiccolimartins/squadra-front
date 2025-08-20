@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { FiArrowUp, FiArrowDown, FiLoader, FiDownload, FiFile } from 'react-icons/fi';
+import { API_BASE_URL } from '../config';
+import { authFetch } from '../auth';
 
 /**
  * Página Compras
@@ -47,8 +49,9 @@ const Compras = () => {
         page: page.toString(),
         per_page: pageSize.toString()
       });
-
-      const response = await fetch(`http://localhost:8000/compras?${params}`);
+      console.log("params", params);
+      const response = await authFetch(`${API_BASE_URL}/compras?${params}`);
+      console.log("response", response);
       if (!response.ok) {
         throw new Error(`Erro na requisição: ${response.status}`);
       }
@@ -84,7 +87,7 @@ const Compras = () => {
         }
       }
 
-      const response = await fetch(`http://localhost:8000/export_pdf?${params}`);
+      const response = await authFetch(`${API_BASE_URL}/export_pdf?${params}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -129,7 +132,7 @@ const Compras = () => {
         }
       }
 
-      const response = await fetch(`http://localhost:8000/export_excel?${params}`);
+      const response = await authFetch(`${API_BASE_URL}/export_excel?${params}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

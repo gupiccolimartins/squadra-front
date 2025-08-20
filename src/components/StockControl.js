@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { FiDownload, FiFile, FiArrowUp, FiArrowDown, FiLoader } from 'react-icons/fi';
+import { API_BASE_URL } from '../config';
+import { authFetch } from '../auth';
 
 const StockControl = () => {
   const [importDate, setImportDate] = useState('12/11/2024');
@@ -35,7 +37,7 @@ const StockControl = () => {
       if (codigo) params.append('codigo', codigo);
       if (descricao) params.append('descricao', descricao);
 
-      const response = await fetch(`http://localhost:8000/produtos-estoque?${params}`);
+      const response = await authFetch(`${API_BASE_URL}/produtos-estoque?${params}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -89,7 +91,7 @@ const StockControl = () => {
         }
       }
 
-      const response = await fetch(`http://localhost:8000/export_pdf?${params}`);
+      const response = await authFetch(`${API_BASE_URL}/export_pdf?${params}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -139,7 +141,7 @@ const StockControl = () => {
         }
       }
 
-      const response = await fetch(`http://localhost:8000/export_excel?${params}`);
+      const response = await authFetch(`${API_BASE_URL}/export_excel?${params}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

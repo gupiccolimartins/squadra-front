@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { FiArrowUp, FiArrowDown, FiLoader } from 'react-icons/fi';
+import { API_BASE_URL } from '../config';
+import { authFetch } from '../auth';
 
 /**
  * Página Estoque Obras Futuras
@@ -46,7 +48,7 @@ const ObrasFuturas = () => {
         per_page: pageSize.toString()
       });
 
-      const response = await fetch(`http://localhost:8000/obras-futuras?${params}`);
+      const response = await authFetch(`${API_BASE_URL}/obras-futuras?${params}`);
       if (!response.ok) {
         throw new Error(`Erro na requisição: ${response.status}`);
       }

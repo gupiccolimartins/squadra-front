@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { FiUpload, FiFile, FiArrowUp, FiArrowDown, FiDownload, FiChevronLeft, FiChevronRight, FiX } from 'react-icons/fi';
+import { API_BASE_URL } from '../config';
+import { authFetch } from '../auth';
 
 const Import = () => {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -21,6 +23,8 @@ const Import = () => {
   // Estados para o modal de nome da obra
   const [showObraModal, setShowObraModal] = useState(false);
   const [obraName, setObraName] = useState('');
+  // Modal para confirmação de substituição de estoque
+  const [showReplaceModal, setShowReplaceModal] = useState(false);
   // Definição dinâmica de rótulos no modal
   const entityLabel = selectedType === 'compras' ? 'Compra' : 'Obra';
 
@@ -87,7 +91,7 @@ const Import = () => {
   const fetchFiles = async (page = 1, perPage = itemsPerPage) => {
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8000/files?page=${page}&per_page=${perPage}`);
+      const response = await authFetch(`${API_BASE_URL}/files?page=${page}&per_page=${perPage}`);
       
       if (response.ok) {
         const data = await response.json();
@@ -125,11 +129,17 @@ const Import = () => {
       return;
     }
 
+    // Se for estoque físico, solicitar confirmação de substituição
+    if (selectedType === 'estoque-fisico') {
+      setShowReplaceModal(true);
+      return;
+    }
+
     // Se não requer modal, fazer upload direto
     await performUpload();
   };
 
-  const performUpload = async (providedObraName = '') => {
+  const performUpload = async (providedObraName = '', shouldReplace = false) => {
     setIsUploading(true);
     setUploadMessage('');
     
@@ -143,8 +153,13 @@ const Import = () => {
         const obraNameToUse = providedObraName.trim() || selectedFile.name.replace(/\.[^/.]+$/, "");
         formData.append('descricao_obra', obraNameToUse);
       }
+
+      // Adicionar flag de substituição para estoque físico quando confirmado
+      if (selectedType === 'estoque-fisico' && shouldReplace) {
+        formData.append('replace', 'True');
+      }
       
-      const response = await fetch('http://localhost:8000/upload', {
+      const response = await authFetch(`${API_BASE_URL}/upload`, {
         method: 'POST',
         body: formData,
       });
@@ -190,6 +205,17 @@ const Import = () => {
     setObraName('');
   };
 
+  // Handlers para modal de substituição de estoque
+  const handleReplaceYes = async () => {
+    setShowReplaceModal(false);
+    await performUpload('', true);
+  };
+
+  const handleReplaceNo = async () => {
+    setShowReplaceModal(false);
+    await performUpload();
+  };
+
   const getStatusClass = (status) => {
     switch (status.toLowerCase()) {
       case 'sucesso':
@@ -206,7 +232,7 @@ const Import = () => {
   const handleDownload = async (item) => {
     try {
       // Fazer requisição para o endpoint de download
-      const response = await fetch(`http://localhost:8000/files/${item.id}/download`, {
+      const response = await authFetch(`${API_BASE_URL}/files/${item.id}/download`, {
         method: 'GET',
       });
 
@@ -509,6 +535,47 @@ const Import = () => {
                 disabled={isUploading}
               >
                 {isUploading ? 'Enviando...' : 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para substituição de estoque físico */}
+      {showReplaceModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Substituir estoque atual</h3>
+              <button 
+                className="modal-close-btn"
+                onClick={() => setShowReplaceModal(false)}
+                type="button"
+              >
+                <FiX size={20} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <p>Você deseja substituir o estoque atual?</p>
+            </div>
+
+            <div className="modal-footer">
+              <button 
+                type="button"
+                className="btn-cancel"
+                onClick={handleReplaceNo}
+                disabled={isUploading}
+              >
+                Não
+              </button>
+              <button 
+                type="button"
+                className="btn-confirm"
+                onClick={handleReplaceYes}
+                disabled={isUploading}
+              >
+                Sim
               </button>
             </div>
           </div>

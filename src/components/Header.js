@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FiHome } from 'react-icons/fi';
+import { clearToken } from '../auth';
 
 const Header = ({ currentPage, setCurrentPage }) => {
   const [showObrasMenu, setShowObrasMenu] = useState(false);
@@ -43,6 +44,13 @@ const Header = ({ currentPage, setCurrentPage }) => {
   const navigate = (page) => {
     setCurrentPage(page);
     setShowObrasMenu(false);
+  };
+
+  const handleLogout = () => {
+    clearToken();
+    try {
+      window.dispatchEvent(new CustomEvent('auth:logout'));
+    } catch (err) {}
   };
 
   return (
@@ -109,6 +117,9 @@ const Header = ({ currentPage, setCurrentPage }) => {
           </button>
           <span> / {getPageTitle()}</span>
         </div>
+        <button className="nav-item" onClick={handleLogout} style={{ marginLeft: 12 }}>
+          Sair
+        </button>
       </div>
 
       {/* Estilos simples para o dropdown */}

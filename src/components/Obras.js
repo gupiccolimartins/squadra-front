@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { FiDownload, FiFile, FiArrowUp, FiArrowDown, FiLoader } from 'react-icons/fi';
+import { API_BASE_URL } from '../config';
+import { authFetch } from '../auth';
 
 const Obras = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,7 +30,9 @@ const Obras = () => {
         per_page: pageSize.toString()
       });
       
-      const response = await fetch(`http://localhost:8000/obras?${params}`);
+      const response = await authFetch(`${API_BASE_URL}/obras?${params}`);
+
+      console.log("response", response);
       
       if (!response.ok) {
         throw new Error(`Erro na requisição: ${response.status}`);
@@ -69,7 +73,7 @@ const Obras = () => {
         }
       }
 
-      const response = await fetch(`http://localhost:8000/export_pdf?${params}`);
+      const response = await authFetch(`${API_BASE_URL}/export_pdf?${params}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -119,7 +123,7 @@ const Obras = () => {
         }
       }
 
-      const response = await fetch(`http://localhost:8000/export_excel?${params}`);
+      const response = await authFetch(`${API_BASE_URL}/export_excel?${params}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -282,7 +286,7 @@ const Obras = () => {
     const newValue = !obrasConsidered[obra.descricao];
     
     try {
-      const response = await fetch(`http://localhost:8000/obras/${obra.id}/is-considered`, {
+      const response = await authFetch(`${API_BASE_URL}/obras/${obra.id}/is-considered`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FiTrash, FiCheckCircle } from 'react-icons/fi';
+import { API_BASE_URL } from '../config';
+import { authFetch } from '../auth';
 
 /**
  * Componente para listar obras.
@@ -51,7 +53,7 @@ const ListarObras = () => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch('http://localhost:8000/obras/all');
+      const response = await authFetch(`${API_BASE_URL}/obras/all`);
       
       if (!response.ok) {
         throw new Error(`Erro na requisição: ${response.status}`);
@@ -79,7 +81,7 @@ const ListarObras = () => {
     setLoadingProducts(true);
 
     try {
-      const response = await fetch(`http://localhost:8000/obras/${obra._id}/produtos`);
+      const response = await authFetch(`${API_BASE_URL}/obras/${obra._id}/produtos`);
       if (!response.ok) {
         throw new Error(`Erro na requisição: ${response.status}`);
       }
@@ -107,7 +109,7 @@ const ListarObras = () => {
     if (!confirm) return;
 
     try {
-      const response = await fetch(`http://localhost:8000/obras/${obraId}`, {
+      const response = await authFetch(`${API_BASE_URL}/obras/${obraId}`, {
         method: 'DELETE',
       });
       if (!response.ok) {
@@ -130,7 +132,7 @@ const ListarObras = () => {
     if (!confirm) return;
 
     try {
-      const response = await fetch(`http://localhost:8000/obras/${obraId}/status?status_update=finished`, {
+      const response = await authFetch(`${API_BASE_URL}/obras/${obraId}/status?status_update=finished`, {
         method: 'PATCH',
       });
       if (!response.ok) {
