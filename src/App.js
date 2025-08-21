@@ -3,6 +3,7 @@ import Header from './components/Header';
 import StockControl from './components/StockControl';
 import Import from './components/Import';
 import ListarObras from './components/ListarObras';
+import ListarObrasFuturas from './components/ListarObrasFuturas';
 import Obras from './components/Obras';
 import ObrasFuturas from './components/ObrasFuturas';
 import Compras from './components/Compras';
@@ -27,8 +28,6 @@ function App() {
 
   const renderCurrentPage = () => {
     switch (currentPage) {
-      case 'principal':
-        return <div className="page-placeholder">Página Principal em desenvolvimento...</div>;
       case 'estoques':
         return <StockControl />;
       case 'importacao':
@@ -37,6 +36,8 @@ function App() {
         return <Obras />;
       case 'listar_obras':
         return <ListarObras />;
+      case 'listar_obras_futuras':
+        return <ListarObrasFuturas />;
       case 'obras_futuras':
         return <ObrasFuturas />;
       case 'compras':

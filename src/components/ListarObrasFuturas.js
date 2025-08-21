@@ -1,17 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { FiTrash, FiCheckCircle } from 'react-icons/fi';
+import { FiTrash } from 'react-icons/fi';
 import { API_BASE_URL } from '../config';
 import { authFetch } from '../auth';
 
 /**
- * Componente para listar obras.
- * - Exibe uma tabela com nome, status, link para listar produtos e botões para finalizar ou remover.
- * - Os dados são carregados do backend (endpoint GET /obras).
- * - Ao clicar em "Listar produtos", um modal é aberto e lista os produtos da obra.
- * - Ao clicar no ícone de check, a obra é finalizada via PATCH /obras/:id/status?status_update=finished.
- * - Ao clicar no ícone de lixeira, a obra é removida via DELETE /obras/:id.
+ * Componente para listar obras futuras.
+ * Por enquanto, utiliza o mesmo endpoint de ListarObras.
  */
-const ListarObras = () => {
+const ListarObrasFuturas = () => {
   const [obras, setObras] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -41,21 +37,21 @@ const ListarObras = () => {
 
   /**
    * Busca todas as obras no backend.
-   * Se o backend retornar um objeto { items: [...] } utiliza items, senão utiliza a resposta direta.
+   * Por enquanto, usa o mesmo endpoint de ListarObras.
    */
   const fetchObras = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await authFetch(`${API_BASE_URL}/obras/all`);
-      
+      const response = await authFetch(`${API_BASE_URL}/obras/all?is_obra_futura=true`);
+
       if (!response.ok) {
         throw new Error(`Erro na requisição: ${response.status}`);
       }
 
       const data = await response.json();
-      
+
       setObras(data);
     } catch (err) {
       console.error('Erro ao carregar obras:', err);
@@ -88,32 +84,7 @@ const ListarObras = () => {
     }
   };
 
-  /**
-   * Finaliza a obra definindo seu status como 'finished'.
-   * A API esperada é PATCH /obras/:id/status?status_update=finished
-   */
-  const handleFinalize = async (obraId) => {
-    const confirm = window.confirm('Tem certeza que deseja finalizar esta obra?');
-    if (!confirm) return;
-
-    try {
-      const response = await authFetch(`${API_BASE_URL}/obras/${obraId}/status?status_update=finished`, {
-        method: 'PATCH',
-      });
-      if (!response.ok) {
-        throw new Error(`Erro na requisição: ${response.status}`);
-      }
-      // Atualiza localmente o status da obra
-      setObras((prev) =>
-        prev.map((obra) =>
-          obra._id === obraId ? { ...obra, status: 'finished' } : obra
-        )
-      );
-    } catch (err) {
-      console.error('Erro ao finalizar obra:', err);
-      alert('Erro ao finalizar obra. Tente novamente.');
-    }
-  };
+  // Página de obras futuras não exibe ação de finalizar
 
   if (loading) {
     return <div className="page-placeholder">Carregando obras...</div>;
@@ -125,7 +96,7 @@ const ListarObras = () => {
 
   return (
     <div className="listar-obras">
-      <h1 className="page-title">Obras</h1>
+      <h1 className="page-title">Obras Futuras</h1>
 
       {obras.length === 0 ? (
         <p>Nenhuma obra encontrada.</p>
@@ -146,14 +117,6 @@ const ListarObras = () => {
                   <td>{renderStatusBadge(obra.status, obra.is_obra_futura)}</td>
                   {hasId && (
                     <td>
-                      {obra.status !== 'finished' && (
-                        <FiCheckCircle
-                          size={18}
-                          className="finalize-icon"
-                          title="Finalizar obra"
-                          onClick={() => handleFinalize(obra._id)}
-                        />
-                      )}
                       <FiTrash
                         size={18}
                         className="delete-icon"
@@ -191,14 +154,7 @@ const ListarObras = () => {
         .link-button:hover {
           color: #2b6cb0;
         }
-        .finalize-icon {
-          cursor: pointer;
-          color: #38A169;
-          margin-right: 8px;
-        }
-        .finalize-icon:hover {
-          color: #2F855A;
-        }
+        
         .delete-icon {
           cursor: pointer;
           color: #e53e3e;
@@ -214,4 +170,6 @@ const ListarObras = () => {
   );
 };
 
-export default ListarObras;
+export default ListarObrasFuturas;
+
+

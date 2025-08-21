@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { FiDownload, FiFile, FiArrowUp, FiArrowDown, FiLoader } from 'react-icons/fi';
+import { FiDownload, FiFile, FiArrowUp, FiArrowDown, FiLoader, FiSearch } from 'react-icons/fi';
 import { API_BASE_URL } from '../config';
 import { authFetch } from '../auth';
 
 const Obras = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
   const [sortField, setSortField] = useState('');
   const [sortDirection, setSortDirection] = useState('asc');
   const [obrasData, setObrasData] = useState([]);
@@ -20,7 +21,7 @@ const Obras = () => {
   const [exportingExcel, setExportingExcel] = useState(false);
 
   // Função para buscar obras da API (sempre obras ativas)
-  const fetchObras = async (page = 1, pageSize = 10) => {
+  const fetchObras = async (page = 1, pageSize = 10, codigo = null, descricao = null) => {
     try {
       setLoading(true);
       setError(null);
@@ -29,6 +30,8 @@ const Obras = () => {
         page: page.toString(),
         per_page: pageSize.toString()
       });
+      if (codigo) params.append('codigo', codigo);
+      if (descricao) params.append('descricao', descricao);
       
       const response = await authFetch(`${API_BASE_URL}/obras?${params}`);
 
@@ -62,14 +65,12 @@ const Obras = () => {
       });
       
       // Add search term as a general filter (could be codigo, descricao, or obra)
-      if (searchTerm.trim()) {
-        // For obras page, we can pass the search term as both codigo and descricao
-        // The backend can handle filtering by any of these fields
-        const isCodeSearch = /^[0-9.]+/.test(searchTerm);
+      if (appliedSearchTerm.trim()) {
+        const isCodeSearch = /^[0-9.]+/.test(appliedSearchTerm);
         if (isCodeSearch) {
-          params.append('codigo', searchTerm.trim());
+          params.append('codigo', appliedSearchTerm.trim());
         } else {
-          params.append('descricao', searchTerm.trim());
+          params.append('descricao', appliedSearchTerm.trim());
         }
       }
 
@@ -114,12 +115,12 @@ const Obras = () => {
       });
       
       // Add search term as a general filter (could be codigo, descricao, or obra)
-      if (searchTerm.trim()) {
-        const isCodeSearch = /^[0-9.]+/.test(searchTerm);
+      if (appliedSearchTerm.trim()) {
+        const isCodeSearch = /^[0-9.]+/.test(appliedSearchTerm);
         if (isCodeSearch) {
-          params.append('codigo', searchTerm.trim());
+          params.append('codigo', appliedSearchTerm.trim());
         } else {
-          params.append('descricao', searchTerm.trim());
+          params.append('descricao', appliedSearchTerm.trim());
         }
       }
 
@@ -157,8 +158,18 @@ const Obras = () => {
 
   // Carregar dados quando o componente montar e quando os filtros mudarem
   useEffect(() => {
-    fetchObras(currentPage, perPage);
-  }, [currentPage, perPage]);
+    if (appliedSearchTerm.trim()) {
+      const isCodeSearch = /^[0-9.]+/.test(appliedSearchTerm);
+      fetchObras(
+        currentPage,
+        perPage,
+        isCodeSearch ? appliedSearchTerm : null,
+        !isCodeSearch ? appliedSearchTerm : null
+      );
+    } else {
+      fetchObras(currentPage, perPage);
+    }
+  }, [currentPage, perPage, appliedSearchTerm]);
 
   // Extrair todas as obras únicas dos dados e seus estados is_considered
   const uniqueObras = useMemo(() => {
@@ -196,16 +207,22 @@ const Obras = () => {
   }, [obrasData]);
 
   const filteredData = useMemo(() => {
-    if (!searchTerm) return obrasData;
-    
-    return obrasData.filter(item =>
-      item.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.obras.some(obra => 
-        obra.descricao.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-  }, [searchTerm, obrasData]);
+    // Com termo aplicado, os dados já vêm filtrados pela API por codigo/descricao
+    return obrasData;
+  }, [appliedSearchTerm, obrasData]);
+
+  const handleSearch = () => {
+    const term = searchTerm.trim();
+    setCurrentPage(1);
+    if (term) {
+      const isCodeSearch = /^[0-9.]+/.test(term);
+      fetchObras(1, perPage, isCodeSearch ? term : null, !isCodeSearch ? term : null);
+      setAppliedSearchTerm(term);
+    } else {
+      setAppliedSearchTerm('');
+      fetchObras(1, perPage);
+    }
+  };
 
   const sortedData = useMemo(() => {
     if (!sortField) return filteredData;
@@ -455,6 +472,31 @@ const Obras = () => {
             align-items: center;
             justify-content: center;
           }
+
+          .search-group {
+            display: flex;
+            align-items: center;
+          }
+
+          .icon-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 36px;
+            width: 40px;
+            border: 1px solid #cbd5e1;
+            background: #f1f5f9;
+            color: #334155;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.15s ease, border-color 0.15s ease;
+            margin-left: 8px;
+          }
+
+          .icon-btn:hover {
+            background: #e2e8f0;
+            border-color: #94a3b8;
+          }
         `}
       </style>
       <h1 className="page-title">Estoque Obras</h1>
@@ -521,6 +563,16 @@ const Obras = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Digite código, produto ou obra..."
             />
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={handleSearch}
+              disabled={loading}
+              title="Buscar"
+              aria-label="Buscar"
+            >
+              <FiSearch size={18} />
+            </button>
           </div>
         </div>
       </div>

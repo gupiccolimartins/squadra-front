@@ -45,9 +45,8 @@ export async function authFetch(input, init = {}) {
   const mergedInit = { ...init };
 
   const headers = new Headers(mergedInit.headers || {});
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
-  }
+  headers.set('Authorization', `Bearer ${token}`);
+  
   mergedInit.headers = headers;
 
   console.log("mergedInit", mergedInit);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { FiArrowUp, FiArrowDown, FiLoader } from 'react-icons/fi';
+import { FiArrowUp, FiArrowDown, FiLoader, FiSearch, FiDownload, FiFile } from 'react-icons/fi';
 import { API_BASE_URL } from '../config';
 import { authFetch } from '../auth';
 
@@ -28,6 +28,7 @@ import { authFetch } from '../auth';
  */
 const ObrasFuturas = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
   const [sortField, setSortField] = useState('');
   const [sortDirection, setSortDirection] = useState('asc');
   const [obrasFuturasData, setObrasFuturasData] = useState([]);
@@ -36,9 +37,12 @@ const ObrasFuturas = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
+  // Export loading states
+  const [exportingPDF, setExportingPDF] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
 
   // Função para buscar dados da API
-  const fetchObrasFuturas = async (page = 1, pageSize = 10) => {
+  const fetchObrasFuturas = async (page = 1, pageSize = 10, codigo = null, descricao = null) => {
     try {
       setLoading(true);
       setError(null);
@@ -47,6 +51,8 @@ const ObrasFuturas = () => {
         page: page.toString(),
         per_page: pageSize.toString()
       });
+      if (codigo) params.append('codigo', codigo);
+      if (descricao) params.append('descricao', descricao);
 
       const response = await authFetch(`${API_BASE_URL}/obras-futuras?${params}`);
       if (!response.ok) {
@@ -65,10 +71,112 @@ const ObrasFuturas = () => {
     }
   };
 
+  // Function to handle PDF export
+  const handleExportPDF = async () => {
+    setExportingPDF(true);
+    try {
+      const params = new URLSearchParams({
+        type: 'produtos-obras-futuras'
+      });
+
+      // Add filters if search term exists
+      if (appliedSearchTerm.trim()) {
+        const isCodeSearch = /^[0-9.]+/.test(appliedSearchTerm);
+        if (isCodeSearch) {
+          params.append('codigo', appliedSearchTerm.trim());
+        } else {
+          params.append('descricao', appliedSearchTerm.trim());
+        }
+      }
+
+      const response = await authFetch(`${API_BASE_URL}/export_pdf?${params}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'produtos-obras-futuras.pdf';
+      if (contentDisposition && contentDisposition.includes('filename=')) {
+        filename = contentDisposition.split('filename=')[1].replace(/"/g, '');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Error exporting PDF:', err);
+      alert('Erro ao gerar PDF. Tente novamente.');
+    } finally {
+      setExportingPDF(false);
+    }
+  };
+
+  // Function to handle Excel export
+  const handleExportExcel = async () => {
+    setExportingExcel(true);
+    try {
+      const params = new URLSearchParams({
+        type: 'produtos-obras-futuras'
+      });
+
+      // Add filters if search term exists
+      if (appliedSearchTerm.trim()) {
+        const isCodeSearch = /^[0-9.]+/.test(appliedSearchTerm);
+        if (isCodeSearch) {
+          params.append('codigo', appliedSearchTerm.trim());
+        } else {
+          params.append('descricao', appliedSearchTerm.trim());
+        }
+      }
+
+      const response = await authFetch(`${API_BASE_URL}/export_excel?${params}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'produtos-obras-futuras.xlsx';
+      if (contentDisposition && contentDisposition.includes('filename=')) {
+        filename = contentDisposition.split('filename=')[1].replace(/"/g, '');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Error exporting Excel:', err);
+      alert('Erro ao gerar Excel. Tente novamente.');
+    } finally {
+      setExportingExcel(false);
+    }
+  };
+
   useEffect(() => {
-    fetchObrasFuturas(currentPage, perPage);
+    if (appliedSearchTerm.trim()) {
+      const isCodeSearch = /^[0-9.]+/.test(appliedSearchTerm);
+      fetchObrasFuturas(
+        currentPage,
+        perPage,
+        isCodeSearch ? appliedSearchTerm : null,
+        !isCodeSearch ? appliedSearchTerm : null
+      );
+    } else {
+      fetchObrasFuturas(currentPage, perPage);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, perPage]);
+  }, [currentPage, perPage, appliedSearchTerm]);
 
   // Extrair obras futuras únicas (máx. 7 colunas visíveis, scroll para mais)
   const uniqueObrasFuturas = useMemo(() => {
@@ -86,15 +194,23 @@ const ObrasFuturas = () => {
       .sort((a, b) => a.descricao.localeCompare(b.descricao));
   }, [obrasFuturasData]);
 
-  // Filtragem por texto
+  // Filtragem (servidor já trata quando há termo aplicado)
   const filteredData = useMemo(() => {
-    if (!searchTerm) return obrasFuturasData;
-    return obrasFuturasData.filter(item =>
-      (item.codigo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.descricao || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.obrasFuturas || []).some(o => (o.descricao || '').toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-  }, [searchTerm, obrasFuturasData]);
+    return obrasFuturasData;
+  }, [appliedSearchTerm, obrasFuturasData]);
+
+  const handleSearch = () => {
+    const term = searchTerm.trim();
+    setCurrentPage(1);
+    if (term) {
+      const isCodeSearch = /^[0-9.]+/.test(term);
+      fetchObrasFuturas(1, perPage, isCodeSearch ? term : null, !isCodeSearch ? term : null);
+      setAppliedSearchTerm(term);
+    } else {
+      setAppliedSearchTerm('');
+      fetchObrasFuturas(1, perPage);
+    }
+  };
 
   // Ordenação
   const sortedData = useMemo(() => {
@@ -224,11 +340,55 @@ const ObrasFuturas = () => {
           align-items: center;
           justify-content: center;
         }
+        .search-group { display: flex; align-items: center; }
+        .icon-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          height: 36px;
+          width: 40px;
+          border: 1px solid #cbd5e1;
+          background: #f1f5f9;
+          color: #334155;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: background 0.15s ease, border-color 0.15s ease;
+          margin-left: 8px;
+        }
+        .icon-btn:hover { background: #e2e8f0; border-color: #94a3b8; }
       `}</style>
       <h1 className="page-title">Estoque Obras Futuras</h1>
 
-      {/* Filtros / busca simples */}
+      {/* Ações e filtros */}
       <div className="controls-section">
+        <div className="action-buttons">
+          <button className="action-btn" onClick={handleExportPDF} disabled={exportingPDF || loading}>
+            {exportingPDF ? (
+              <>
+                <FiLoader size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                Gerando PDF...
+              </>
+            ) : (
+              <>
+                <FiFile size={16} />
+                Gerar PDF
+              </>
+            )}
+          </button>
+          <button className="action-btn" onClick={handleExportExcel} disabled={exportingExcel || loading}>
+            {exportingExcel ? (
+              <>
+                <FiLoader size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                Gerando Excel...
+              </>
+            ) : (
+              <>
+                <FiDownload size={16} />
+                Excel
+              </>
+            )}
+          </button>
+        </div>
         <div className="search-section">
           <div className="search-group">
             <label>Itens por página:</label>
@@ -255,6 +415,16 @@ const ObrasFuturas = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Digite código, produto ou obra futura..."
             />
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={handleSearch}
+              disabled={loading}
+              title="Buscar"
+              aria-label="Buscar"
+            >
+              <FiSearch size={18} />
+            </button>
           </div>
         </div>
       </div>

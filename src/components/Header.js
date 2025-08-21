@@ -22,8 +22,6 @@ const Header = ({ currentPage, setCurrentPage }) => {
 
   const getPageTitle = () => {
     switch (currentPage) {
-      case 'principal':
-        return 'Principal';
       case 'estoques':
         return 'Estoque Controle';
       case 'importacao':
@@ -32,6 +30,8 @@ const Header = ({ currentPage, setCurrentPage }) => {
         return 'Estoque Obras';
       case 'listar_obras':
         return 'Listar Obras';
+      case 'listar_obras_futuras':
+        return 'Listar Obras Futuras';
       case 'obras_futuras':
         return 'Estoque Obras Futuras';
       case 'compras':
@@ -56,12 +56,6 @@ const Header = ({ currentPage, setCurrentPage }) => {
   return (
     <header className="header">
       <div className="nav-menu">
-        <button
-          className={`nav-item ${currentPage === 'principal' ? 'active' : ''}`}
-          onClick={() => navigate('principal')}
-        >
-          Principal
-        </button>
         <button
           className={`nav-item ${currentPage === 'estoques' ? 'active' : ''}`}
           onClick={() => navigate('estoques')}
@@ -89,7 +83,7 @@ const Header = ({ currentPage, setCurrentPage }) => {
           onMouseLeave={() => setShowObrasMenu(false)}
         >
           <button
-            className={`nav-item ${['obras', 'listar_obras', 'obras_futuras'].includes(currentPage) ? 'active' : ''}`}
+            className={`nav-item ${['obras', 'listar_obras', 'listar_obras_futuras', 'obras_futuras'].includes(currentPage) ? 'active' : ''}`}
             onClick={() => navigate('obras')}
           >
             Obras ▾
@@ -98,6 +92,9 @@ const Header = ({ currentPage, setCurrentPage }) => {
             <div className="dropdown-menu">
               <button className="dropdown-item" onClick={() => navigate('listar_obras')}>
                 Listar Obras
+              </button>
+              <button className="dropdown-item" onClick={() => navigate('listar_obras_futuras')}>
+                Listar Obras Futuras
               </button>
               <button className="dropdown-item" onClick={() => navigate('obras')}>
                 Estoque Obras
@@ -112,7 +109,7 @@ const Header = ({ currentPage, setCurrentPage }) => {
 
       <div className="header-right">
         <div className="breadcrumb">
-          <button onClick={() => navigate('principal')}>
+          <button onClick={() => navigate('estoques')}>
             <FiHome size={16} />
           </button>
           <span> / {getPageTitle()}</span>

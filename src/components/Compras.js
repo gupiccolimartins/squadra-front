@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { FiArrowUp, FiArrowDown, FiLoader, FiDownload, FiFile } from 'react-icons/fi';
+import { FiArrowUp, FiArrowDown, FiLoader, FiDownload, FiFile, FiSearch } from 'react-icons/fi';
 import { API_BASE_URL } from '../config';
 import { authFetch } from '../auth';
 
@@ -26,6 +26,7 @@ import { authFetch } from '../auth';
 
 const Compras = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
   const [sortField, setSortField] = useState('');
   const [sortDirection, setSortDirection] = useState('asc');
   const [comprasData, setComprasData] = useState([]);
@@ -40,7 +41,7 @@ const Compras = () => {
   const [exportingExcel, setExportingExcel] = useState(false);
 
   // Função para buscar dados da API
-  const fetchCompras = async (page = 1, pageSize = 10) => {
+  const fetchCompras = async (page = 1, pageSize = 10, codigo = null, descricao = null) => {
     try {
       setLoading(true);
       setError(null);
@@ -49,9 +50,10 @@ const Compras = () => {
         page: page.toString(),
         per_page: pageSize.toString()
       });
+      if (codigo) params.append('codigo', codigo);
+      if (descricao) params.append('descricao', descricao);
       console.log("params", params);
       const response = await authFetch(`${API_BASE_URL}/compras?${params}`);
-      console.log("response", response);
       if (!response.ok) {
         throw new Error(`Erro na requisição: ${response.status}`);
       }
@@ -78,12 +80,12 @@ const Compras = () => {
       });
 
       // Add filters if search term exists
-      if (searchTerm.trim()) {
-        const isCodeSearch = /^[0-9.]+/.test(searchTerm);
+      if (appliedSearchTerm.trim()) {
+        const isCodeSearch = /^[0-9.]+/.test(appliedSearchTerm);
         if (isCodeSearch) {
-          params.append('codigo', searchTerm.trim());
+          params.append('codigo', appliedSearchTerm.trim());
         } else {
-          params.append('descricao', searchTerm.trim());
+          params.append('descricao', appliedSearchTerm.trim());
         }
       }
 
@@ -123,16 +125,17 @@ const Compras = () => {
         type: 'produtos-compras'
       });
 
-      if (searchTerm.trim()) {
-        const isCodeSearch = /^[0-9.]+/.test(searchTerm);
+      if (appliedSearchTerm.trim()) {
+        const isCodeSearch = /^[0-9.]+/.test(appliedSearchTerm);
         if (isCodeSearch) {
-          params.append('codigo', searchTerm.trim());
+          params.append('codigo', appliedSearchTerm.trim());
         } else {
-          params.append('descricao', searchTerm.trim());
+          params.append('descricao', appliedSearchTerm.trim());
         }
       }
 
       const response = await authFetch(`${API_BASE_URL}/export_excel?${params}`);
+      console.log("response", response);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -161,9 +164,19 @@ const Compras = () => {
   };
   
   useEffect(() => {
-    fetchCompras(currentPage, perPage);
+    if (appliedSearchTerm.trim()) {
+      const isCodeSearch = /^[0-9.]+/.test(appliedSearchTerm);
+      fetchCompras(
+        currentPage,
+        perPage,
+        isCodeSearch ? appliedSearchTerm : null,
+        !isCodeSearch ? appliedSearchTerm : null
+      );
+    } else {
+      fetchCompras(currentPage, perPage);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, perPage]);
+  }, [currentPage, perPage, appliedSearchTerm]);
 
   // Extrair compras únicas (máx. 5 colunas visíveis, scroll para mais)
   const uniqueCompras = useMemo(() => {
@@ -182,14 +195,22 @@ const Compras = () => {
   }, [comprasData]);
 
   const filteredData = useMemo(() => {
-    if (!searchTerm) return comprasData;
+    // Quando há termo aplicado, os dados já vêm filtrados da API
+    return comprasData;
+  }, [appliedSearchTerm, comprasData]);
 
-    return comprasData.filter(item =>
-      (item.codigo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.descricao || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.compras || []).some(c => (c.descricao || '').toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-  }, [searchTerm, comprasData]);
+  const handleSearch = () => {
+    const term = searchTerm.trim();
+    setCurrentPage(1);
+    if (term) {
+      const isCodeSearch = /^[0-9.]+/.test(term);
+      fetchCompras(1, perPage, isCodeSearch ? term : null, !isCodeSearch ? term : null);
+      setAppliedSearchTerm(term);
+    } else {
+      setAppliedSearchTerm('');
+      fetchCompras(1, perPage);
+    }
+  };
 
   const sortedData = useMemo(() => {
     if (!sortField) return filteredData;
@@ -329,6 +350,31 @@ const Compras = () => {
             align-items: center;
             justify-content: center;
           }
+
+          .search-group {
+            display: flex;
+            align-items: center;
+          }
+
+          .icon-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 36px;
+            width: 40px;
+            border: 1px solid #cbd5e1;
+            background: #f1f5f9;
+            color: #334155;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.15s ease, border-color 0.15s ease;
+            margin-left: 8px;
+          }
+
+          .icon-btn:hover {
+            background: #e2e8f0;
+            border-color: #94a3b8;
+          }
         `}
       </style>
       <h1 className="page-title">Compras Planejadas</h1>
@@ -395,6 +441,16 @@ const Compras = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Digite código, produto ou compra..."
             />
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={handleSearch}
+              disabled={loading}
+              title="Buscar"
+              aria-label="Buscar"
+            >
+              <FiSearch size={18} />
+            </button>
           </div>
         </div>
       </div>

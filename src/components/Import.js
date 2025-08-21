@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { FiUpload, FiFile, FiArrowUp, FiArrowDown, FiDownload, FiChevronLeft, FiChevronRight, FiX } from 'react-icons/fi';
+import { FiUpload, FiFile, FiArrowUp, FiArrowDown, FiDownload, FiChevronLeft, FiChevronRight, FiX, FiSearch } from 'react-icons/fi';
 import { API_BASE_URL } from '../config';
 import { authFetch } from '../auth';
 
@@ -7,6 +7,7 @@ const Import = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedType, setSelectedType] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
   const [sortField, setSortField] = useState('');
   const [sortDirection, setSortDirection] = useState('desc');
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -37,13 +38,17 @@ const Import = () => {
   ];
 
   const filteredData = useMemo(() => {
-    if (!searchTerm) return importData;
+    if (!appliedSearchTerm) return importData;
     
     return importData.filter(item =>
-      item.original_filename.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.file_type.toLowerCase().includes(searchTerm.toLowerCase())
+      item.original_filename.toLowerCase().includes(appliedSearchTerm.toLowerCase()) ||
+      item.file_type.toLowerCase().includes(appliedSearchTerm.toLowerCase())
     );
-  }, [searchTerm, importData]);
+  }, [appliedSearchTerm, importData]);
+
+  const handleSearch = () => {
+    setAppliedSearchTerm(searchTerm.trim());
+  };
 
   const sortedData = useMemo(() => {
     if (!sortField) return filteredData;
@@ -284,6 +289,24 @@ const Import = () => {
   return (
     <div className="import-page">
       <h1 className="page-title">Importação</h1>
+      <style>{`
+        .search-control { display: flex; align-items: center; }
+        .icon-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          height: 36px;
+          width: 40px;
+          border: 1px solid #cbd5e1;
+          background: #f1f5f9;
+          color: #334155;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: background 0.15s ease, border-color 0.15s ease;
+          margin-left: 8px;
+        }
+        .icon-btn:hover { background: #e2e8f0; border-color: #94a3b8; }
+      `}</style>
       
       {/* Import Section */}
       <div className="import-section">
@@ -372,6 +395,16 @@ const Import = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Digite para buscar..."
             />
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={handleSearch}
+              disabled={loading}
+              title="Buscar"
+              aria-label="Buscar"
+            >
+              <FiSearch size={18} />
+            </button>
           </div>
         </div>
 

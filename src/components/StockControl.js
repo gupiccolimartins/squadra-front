@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { FiDownload, FiFile, FiArrowUp, FiArrowDown, FiLoader } from 'react-icons/fi';
+import { FiDownload, FiFile, FiArrowUp, FiArrowDown, FiLoader, FiSearch } from 'react-icons/fi';
 import { API_BASE_URL } from '../config';
 import { authFetch } from '../auth';
 
@@ -7,6 +7,7 @@ const StockControl = () => {
   const [importDate, setImportDate] = useState('12/11/2024');
   const [compareDate, setCompareDate] = useState('12/11/2024');
   const [searchTerm, setSearchTerm] = useState('');
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
   const [sortField, setSortField] = useState('');
   const [sortDirection, setSortDirection] = useState('asc');
   
@@ -82,12 +83,12 @@ const StockControl = () => {
       });
       
       // Add filters if search term exists
-      if (searchTerm.trim()) {
-        const isCodeSearch = /^[0-9.]+/.test(searchTerm);
+      if (appliedSearchTerm.trim()) {
+        const isCodeSearch = /^[0-9.]+/.test(appliedSearchTerm);
         if (isCodeSearch) {
-          params.append('codigo', searchTerm.trim());
+          params.append('codigo', appliedSearchTerm.trim());
         } else {
-          params.append('descricao', searchTerm.trim());
+          params.append('descricao', appliedSearchTerm.trim());
         }
       }
 
@@ -132,12 +133,12 @@ const StockControl = () => {
       });
       
       // Add filters if search term exists
-      if (searchTerm.trim()) {
-        const isCodeSearch = /^[0-9.]+/.test(searchTerm);
+      if (appliedSearchTerm.trim()) {
+        const isCodeSearch = /^[0-9.]+/.test(appliedSearchTerm);
         if (isCodeSearch) {
-          params.append('codigo', searchTerm.trim());
+          params.append('codigo', appliedSearchTerm.trim());
         } else {
-          params.append('descricao', searchTerm.trim());
+          params.append('descricao', appliedSearchTerm.trim());
         }
       }
 
@@ -173,25 +174,29 @@ const StockControl = () => {
     }
   };
 
-  // Fetch data on component mount and when pagination changes
+  // Fetch data on component mount and when pagination or applied filter changes
   useEffect(() => {
-    fetchProdutosEstoque(currentPage, perPage);
-  }, [currentPage, perPage]);
+    if (appliedSearchTerm.trim()) {
+      const isCodeSearch = /^[0-9.]+/.test(appliedSearchTerm);
+      fetchProdutosEstoque(currentPage, perPage, isCodeSearch ? appliedSearchTerm : null, !isCodeSearch ? appliedSearchTerm : null);
+    } else {
+      fetchProdutosEstoque(currentPage, perPage);
+    }
+  }, [currentPage, perPage, appliedSearchTerm]);
 
-  // Debounced search effect
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchTerm.trim()) {
-        // Check if searchTerm looks like a code (numbers/dots) or description (letters)
-        const isCodeSearch = /^[0-9.]+/.test(searchTerm);
-        fetchProdutosEstoque(1, perPage, isCodeSearch ? searchTerm : null, !isCodeSearch ? searchTerm : null);
-      } else {
-        fetchProdutosEstoque(currentPage, perPage);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
+  // Search only when user clicks the search icon
+  const handleSearch = () => {
+    if (searchTerm.trim()) {
+      const isCodeSearch = /^[0-9.]+/.test(searchTerm);
+      setCurrentPage(1);
+      fetchProdutosEstoque(1, perPage, isCodeSearch ? searchTerm : null, !isCodeSearch ? searchTerm : null);
+      setAppliedSearchTerm(searchTerm);
+    } else {
+      setAppliedSearchTerm('');
+      setCurrentPage(1);
+      fetchProdutosEstoque(1, perPage);
+    }
+  };
 
   // Use API data if available, otherwise use hardcoded data
   const dataToUse = apiData.length > 0 ? apiData : [];
@@ -202,20 +207,20 @@ const StockControl = () => {
   const dataEstoqueAnterior = firstItem?.dataEstoqueAnterior || '11/11/2024';
 
   const filteredData = useMemo(() => {
-    // If using API data and there's a search term, data is already filtered by the API
-    if (apiData.length > 0 && searchTerm.trim()) {
+    // If using API data and there's an applied search term, data is already filtered by the API
+    if (apiData.length > 0 && appliedSearchTerm.trim()) {
       return dataToUse;
     }
     
-    // When no search term, return all data
-    if (!searchTerm) return dataToUse;
+    // When no applied search term, return all data
+    if (!appliedSearchTerm) return dataToUse;
     
     return dataToUse.filter(item =>
-      (item.codigo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.descricao || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.cor || '').toLowerCase().includes(searchTerm.toLowerCase())
+      (item.codigo || '').toLowerCase().includes(appliedSearchTerm.toLowerCase()) ||
+      (item.descricao || '').toLowerCase().includes(appliedSearchTerm.toLowerCase()) ||
+      (item.cor || '').toLowerCase().includes(appliedSearchTerm.toLowerCase())
     );
-  }, [dataToUse, searchTerm, apiData]);
+  }, [dataToUse, appliedSearchTerm, apiData]);
 
   const sortedData = useMemo(() => {
     if (!sortField) return filteredData;
@@ -287,6 +292,30 @@ const StockControl = () => {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
           }
+
+          .search-group {
+            display: flex;
+            align-items: center;
+          }
+
+          .icon-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 36px;
+            width: 40px;
+            border: 1px solid #cbd5e1;
+            background: #f1f5f9;
+            color: #334155;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.15s ease, border-color 0.15s ease;
+          }
+
+          .icon-btn:hover {
+            background: #e2e8f0;
+            border-color: #94a3b8;
+          }
         `}
       </style>
       <h1 className="page-title">PCM do dia {dataEstoqueAtual}</h1>
@@ -354,6 +383,16 @@ const StockControl = () => {
               placeholder="Digite código, produto ou cor..."
               disabled={loading}
             />
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={handleSearch}
+              disabled={loading}
+              title="Buscar"
+              aria-label="Buscar"
+            >
+              <FiSearch size={18} />
+            </button>
           </div>
         </div>
       </div>
