@@ -26,6 +26,11 @@ const Import = () => {
   const [obraName, setObraName] = useState('');
   // Modal para confirmação de substituição de estoque
   const [showReplaceModal, setShowReplaceModal] = useState(false);
+  // Modal para seleção de separador CSV
+  const [showCsvSeparatorModal, setShowCsvSeparatorModal] = useState(false);
+  const [csvSeparator, setCsvSeparator] = useState(';');
+  // Parâmetros pendentes para upload após seleção de separador CSV
+  const [pendingUploadParams, setPendingUploadParams] = useState({ obraName: '', shouldReplace: false });
   // Definição dinâmica de rótulos no modal
   const entityLabel = selectedType === 'compras' ? 'Compra' : 'Obra';
 
@@ -122,6 +127,23 @@ const Import = () => {
     fetchFiles(1, itemsPerPage);
   }, [itemsPerPage]);
 
+  // Verifica se o arquivo é CSV
+  const isCsvFile = (file) => {
+    if (!file) return false;
+    const extension = file.name.split('.').pop().toLowerCase();
+    return extension === 'csv';
+  };
+
+  // Função que continua o fluxo após seleção do separador CSV (se necessário)
+  const proceedWithUpload = async (providedObraName = '', shouldReplace = false) => {
+    if (isCsvFile(selectedFile)) {
+      setPendingUploadParams({ obraName: providedObraName, shouldReplace });
+      setShowCsvSeparatorModal(true);
+    } else {
+      await performUpload(providedObraName, shouldReplace, null);
+    }
+  };
+
   const handleUpload = async () => {
     if (!selectedFile || !selectedType) {
       alert('Por favor, selecione um arquivo e o tipo de importação.');
@@ -140,11 +162,11 @@ const Import = () => {
       return;
     }
 
-    // Se não requer modal, fazer upload direto
-    await performUpload();
+    // Se não requer modal, verificar se é CSV e fazer upload
+    await proceedWithUpload();
   };
 
-  const performUpload = async (providedObraName = '', shouldReplace = false) => {
+  const performUpload = async (providedObraName = '', shouldReplace = false, separator = null) => {
     setIsUploading(true);
     setUploadMessage('');
     
@@ -163,6 +185,11 @@ const Import = () => {
       if (selectedType === 'estoque-fisico' && shouldReplace) {
         formData.append('replace', 'True');
       }
+
+      // Adicionar separador CSV se fornecido
+      if (separator) {
+        formData.append('csv_separator', separator);
+      }
       
       const response = await authFetch(`${API_BASE_URL}/upload`, {
         method: 'POST',
@@ -177,6 +204,7 @@ const Import = () => {
         setSelectedFile(null);
         setSelectedType('');
         setObraName('');
+        setCsvSeparator(';');
         
         // Resetar o input file
         const fileInput = document.getElementById('file-upload');
@@ -202,7 +230,8 @@ const Import = () => {
 
   const handleObraModalConfirm = async () => {
     setShowObraModal(false);
-    await performUpload(obraName);
+    const savedObraName = obraName;
+    await proceedWithUpload(savedObraName, false);
   };
 
   const handleObraModalCancel = () => {
@@ -213,12 +242,27 @@ const Import = () => {
   // Handlers para modal de substituição de estoque
   const handleReplaceYes = async () => {
     setShowReplaceModal(false);
-    await performUpload('', true);
+    await proceedWithUpload('', true);
   };
 
   const handleReplaceNo = async () => {
     setShowReplaceModal(false);
-    await performUpload();
+    await proceedWithUpload('', false);
+  };
+
+  // Handlers para modal de separador CSV
+  const handleCsvSeparatorConfirm = async () => {
+    setShowCsvSeparatorModal(false);
+    const { obraName: pendingObraName, shouldReplace } = pendingUploadParams;
+    await performUpload(pendingObraName, shouldReplace, csvSeparator);
+    setPendingUploadParams({ obraName: '', shouldReplace: false });
+    setObraName('');
+  };
+
+  const handleCsvSeparatorCancel = () => {
+    setShowCsvSeparatorModal(false);
+    setPendingUploadParams({ obraName: '', shouldReplace: false });
+    setCsvSeparator(';');
   };
 
   const getStatusClass = (status) => {
@@ -322,7 +366,7 @@ const Import = () => {
               <input
                 type="file"
                 id="file-upload"
-                accept=".xlsx,.xls"
+                accept=".xlsx,.xls,.csv"
                 onChange={handleFileChange}
                 style={{ display: 'none' }}
               />
@@ -331,7 +375,7 @@ const Import = () => {
                 Browse...
               </label>
               <span className="file-status">
-                {selectedFile ? selectedFile.name : 'No file selected.'}
+                {selectedFile ? selectedFile.name : 'Nenhum arquivo selecionado.'}
               </span>
             </div>
 
@@ -609,6 +653,89 @@ const Import = () => {
                 disabled={isUploading}
               >
                 Sim
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para seleção de separador CSV */}
+      {showCsvSeparatorModal && (
+        <div className="modal-overlay" onClick={handleCsvSeparatorCancel}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Separador de Colunas (CSV)</h3>
+              <button 
+                className="modal-close-btn"
+                onClick={handleCsvSeparatorCancel}
+                type="button"
+              >
+                <FiX size={20} />
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Selecione o separador de colunas do arquivo CSV:</label>
+                <div className="separator-options">
+                  <div className="radio-group">
+                    <input
+                      type="radio"
+                      id="sep-semicolon"
+                      name="csvSeparator"
+                      value=";"
+                      checked={csvSeparator === ';'}
+                      onChange={(e) => setCsvSeparator(e.target.value)}
+                    />
+                    <label htmlFor="sep-semicolon">Ponto e vírgula ( ; )</label>
+                  </div>
+                  <div className="radio-group">
+                    <input
+                      type="radio"
+                      id="sep-comma"
+                      name="csvSeparator"
+                      value=","
+                      checked={csvSeparator === ','}
+                      onChange={(e) => setCsvSeparator(e.target.value)}
+                    />
+                    <label htmlFor="sep-comma">Vírgula ( , )</label>
+                  </div>
+                  <div className="radio-group">
+                    <input
+                      type="radio"
+                      id="sep-tab"
+                      name="csvSeparator"
+                      value="tab"
+                      checked={csvSeparator === 'tab'}
+                      onChange={(e) => setCsvSeparator(e.target.value)}
+                    />
+                    <label htmlFor="sep-tab">Tabulação (Tab)</label>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="modal-info">
+                <p>
+                  <strong>Dica:</strong> O separador mais comum em arquivos CSV brasileiros é o ponto e vírgula ( ; ).
+                </p>
+              </div>
+            </div>
+            
+            <div className="modal-footer">
+              <button 
+                type="button"
+                className="btn-cancel"
+                onClick={handleCsvSeparatorCancel}
+              >
+                Cancelar
+              </button>
+              <button 
+                type="button"
+                className="btn-confirm"
+                onClick={handleCsvSeparatorConfirm}
+                disabled={isUploading}
+              >
+                {isUploading ? 'Enviando...' : 'Confirmar'}
               </button>
             </div>
           </div>

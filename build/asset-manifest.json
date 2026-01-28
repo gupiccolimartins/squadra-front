@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/squadra-front/static/css/main.c29c33dd.css",
-    "main.js": "/squadra-front/static/js/main.a9c97742.js",
+    "main.js": "/squadra-front/static/js/main.0ab5481f.js",
     "static/js/453.c13e2d16.chunk.js": "/squadra-front/static/js/453.c13e2d16.chunk.js",
     "index.html": "/squadra-front/index.html",
     "main.c29c33dd.css.map": "/squadra-front/static/css/main.c29c33dd.css.map",
-    "main.a9c97742.js.map": "/squadra-front/static/js/main.a9c97742.js.map",
+    "main.0ab5481f.js.map": "/squadra-front/static/js/main.0ab5481f.js.map",
     "453.c13e2d16.chunk.js.map": "/squadra-front/static/js/453.c13e2d16.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.c29c33dd.css",
-    "static/js/main.a9c97742.js"
+    "static/js/main.0ab5481f.js"
   ]
 }
