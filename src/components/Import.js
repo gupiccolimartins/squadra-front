@@ -198,7 +198,11 @@ const Import = () => {
       
       if (response.ok) {
         const result = await response.json();
-        setUploadMessage(`Sucesso! Arquivo "${selectedFile.name}" foi enviado e está sendo processado.`);
+        const backendMessage = result?.message || 'Arquivo processado com sucesso.';
+        const duplicatesMessage = Array.isArray(result?.duplicate_codes) && result.duplicate_codes.length > 0
+          ? ` Duplicados ignorados: ${result.duplicate_codes.join(', ')}.`
+          : '';
+        setUploadMessage(`Sucesso! ${backendMessage}${duplicatesMessage}`);
         
         // Limpar o formulário após sucesso
         setSelectedFile(null);
