@@ -3,12 +3,17 @@ import { FiHome } from 'react-icons/fi';
 import { clearToken } from '../auth';
 
 const Header = ({ currentPage, setCurrentPage }) => {
+  const [showEstoquesMenu, setShowEstoquesMenu] = useState(false);
   const [showObrasMenu, setShowObrasMenu] = useState(false);
+  const estoquesRef = useRef(null);
   const obrasRef = useRef(null);
 
   // Fecha o dropdown se clicar fora dele
   useEffect(() => {
     const handleClickOutside = (event) => {
+      if (estoquesRef.current && !estoquesRef.current.contains(event.target)) {
+        setShowEstoquesMenu(false);
+      }
       if (obrasRef.current && !obrasRef.current.contains(event.target)) {
         setShowObrasMenu(false);
       }
@@ -24,6 +29,8 @@ const Header = ({ currentPage, setCurrentPage }) => {
     switch (currentPage) {
       case 'estoques':
         return 'Estoque Controle';
+      case 'listar_arquivos':
+        return 'Listar Arquivos';
       case 'importacao':
         return 'Importação';
       case 'obras':
@@ -43,6 +50,7 @@ const Header = ({ currentPage, setCurrentPage }) => {
 
   const navigate = (page) => {
     setCurrentPage(page);
+    setShowEstoquesMenu(false);
     setShowObrasMenu(false);
   };
 
@@ -56,12 +64,29 @@ const Header = ({ currentPage, setCurrentPage }) => {
   return (
     <header className="header">
       <div className="nav-menu">
-        <button
-          className={`nav-item ${currentPage === 'estoques' ? 'active' : ''}`}
-          onClick={() => navigate('estoques')}
+        <div
+          className="nav-item dropdown"
+          ref={estoquesRef}
+          onMouseEnter={() => setShowEstoquesMenu(true)}
+          onMouseLeave={() => setShowEstoquesMenu(false)}
         >
-          Estoques
-        </button>
+          <button
+            className={`nav-item ${['estoques', 'listar_arquivos'].includes(currentPage) ? 'active' : ''}`}
+            onClick={() => navigate('estoques')}
+          >
+            Estoques ▾
+          </button>
+          {showEstoquesMenu && (
+            <div className="dropdown-menu">
+              <button className="dropdown-item" onClick={() => navigate('estoques')}>
+                Controle Estoque
+              </button>
+              <button className="dropdown-item" onClick={() => navigate('listar_arquivos')}>
+                Listar arquivos
+              </button>
+            </div>
+          )}
+        </div>
         <button
           className={`nav-item ${currentPage === 'importacao' ? 'active' : ''}`}
           onClick={() => navigate('importacao')}

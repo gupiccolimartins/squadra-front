@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import StockControl from './components/StockControl';
 import Import from './components/Import';
+import ListarArquivos from './components/ListarArquivos';
 import ListarObras from './components/ListarObras';
 import ListarObrasFuturas from './components/ListarObrasFuturas';
 import Obras from './components/Obras';
@@ -30,6 +31,8 @@ function App() {
     switch (currentPage) {
       case 'estoques':
         return <StockControl />;
+      case 'listar_arquivos':
+        return <ListarArquivos />;
       case 'importacao':
         return <Import />;
       case 'obras':

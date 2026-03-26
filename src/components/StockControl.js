@@ -4,8 +4,6 @@ import { API_BASE_URL } from '../config';
 import { authFetch } from '../auth';
 
 const StockControl = () => {
-  const [importDate, setImportDate] = useState('12/11/2024');
-  const [compareDate, setCompareDate] = useState('12/11/2024');
   const [searchTerm, setSearchTerm] = useState('');
   const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
   const [sortField, setSortField] = useState('');
@@ -56,8 +54,8 @@ const StockControl = () => {
         saldoInterm: item.saldoInterm ?? 0,
         saldoAposCompras: item.saldoAposCompras ?? 0,
         saldoAposNovasObras: item.saldoAposNovasObras ?? 0,
-        dataEstoqueAtual: item.dataEstoqueAtual ?? '12/11/2024',
-        dataEstoqueAnterior: item.dataEstoqueAnterior ?? '11/11/2024'
+        dataEstoqueAtual: item.dataEstoqueAtual ?? '',
+        dataEstoqueAnterior: item.dataEstoqueAnterior ?? ''
       }));
       
       setApiData(itemsWithDefaults);
@@ -203,8 +201,8 @@ const StockControl = () => {
 
   // Get the first item to extract the dates for display
   const firstItem = dataToUse[0];
-  const dataEstoqueAtual = firstItem?.dataEstoqueAtual || '12/11/2024';
-  const dataEstoqueAnterior = firstItem?.dataEstoqueAnterior || '11/11/2024';
+  const dataEstoqueAtual = firstItem?.dataEstoqueAtual || '';
+  const dataEstoqueAnterior = firstItem?.dataEstoqueAnterior || '';
 
   const filteredData = useMemo(() => {
     // If using API data and there's an applied search term, data is already filtered by the API
@@ -318,7 +316,7 @@ const StockControl = () => {
           }
         `}
       </style>
-      <h1 className="page-title">PCM do dia {dataEstoqueAtual}</h1>
+      <h1 className="page-title">{dataEstoqueAtual ? `PCM do dia ${dataEstoqueAtual}` : 'PCM'}</h1>
       
       <div className="controls-section">
         <div className="action-buttons">
@@ -480,7 +478,7 @@ const StockControl = () => {
                 className="sortable" 
                 onClick={() => handleSort('estoqueAnterior')}
               >
-                Estoque Anterior ({dataEstoqueAnterior})
+                {dataEstoqueAnterior ? `Estoque Anterior (${dataEstoqueAnterior})` : 'Estoque Anterior'}
                 {sortField === 'estoqueAnterior' && (
                   sortDirection === 'asc' ? <FiArrowUp size={12} /> : <FiArrowDown size={12} />
                 )}

@@ -202,7 +202,10 @@ const Import = () => {
         const duplicatesMessage = Array.isArray(result?.duplicate_codes) && result.duplicate_codes.length > 0
           ? ` Duplicados ignorados: ${result.duplicate_codes.join(', ')}.`
           : '';
-        setUploadMessage(`Sucesso! ${backendMessage}${duplicatesMessage}`);
+        const missingProductsMessage = Array.isArray(result?.missing_stock_products) && result.missing_stock_products.length > 0
+          ? ` Produtos não importados (não existem no estoque): ${result.missing_stock_products.join(', ')}.`
+          : '';
+        setUploadMessage(`Sucesso! ${backendMessage}${duplicatesMessage}${missingProductsMessage}`);
         
         // Limpar o formulário após sucesso
         setSelectedFile(null);
