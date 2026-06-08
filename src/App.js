@@ -9,12 +9,15 @@ import Obras from './components/Obras';
 import ObrasFuturas from './components/ObrasFuturas';
 import Compras from './components/Compras';
 import Login from './components/Login';
+import MaterialSelect from './components/MaterialSelect';
+import { useMaterial } from './MaterialContext';
 import { isAuthenticated as getIsAuthenticated } from './auth';
 import './App.css';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('estoques');
   const [isAuthed, setIsAuthed] = useState(getIsAuthenticated());
+  const { materialType } = useMaterial();
 
   useEffect(() => {
     const handleLogout = () => setIsAuthed(false);
@@ -56,6 +59,10 @@ function App() {
         <Login onSuccess={() => setIsAuthed(true)} />
       </div>
     );
+  }
+
+  if (!materialType) {
+    return <MaterialSelect />;
   }
 
   return (

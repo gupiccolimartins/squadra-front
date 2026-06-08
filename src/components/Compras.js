@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { FiArrowUp, FiArrowDown, FiLoader, FiDownload, FiFile, FiSearch } from 'react-icons/fi';
 import { API_BASE_URL } from '../config';
 import { authFetch } from '../auth';
+import { useMaterial } from '../MaterialContext';
 
 /**
  * Página Compras
@@ -25,6 +26,7 @@ import { authFetch } from '../auth';
  */
 
 const Compras = () => {
+  const { materialType } = useMaterial();
   const [searchTerm, setSearchTerm] = useState('');
   const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
   const [sortField, setSortField] = useState('');
@@ -48,11 +50,11 @@ const Compras = () => {
 
       const params = new URLSearchParams({
         page: page.toString(),
-        per_page: pageSize.toString()
+        per_page: pageSize.toString(),
+        material_type: materialType
       });
       if (codigo) params.append('codigo', codigo);
       if (descricao) params.append('descricao', descricao);
-      console.log("params", params);
       const response = await authFetch(`${API_BASE_URL}/compras?${params}`);
       if (!response.ok) {
         throw new Error(`Erro na requisição: ${response.status}`);
@@ -76,7 +78,8 @@ const Compras = () => {
     setExportingPDF(true);
     try {
       const params = new URLSearchParams({
-        type: 'produtos-compras'
+        type: 'produtos-compras',
+        material_type: materialType
       });
 
       // Add filters if search term exists
@@ -122,7 +125,8 @@ const Compras = () => {
     setExportingExcel(true);
     try {
       const params = new URLSearchParams({
-        type: 'produtos-compras'
+        type: 'produtos-compras',
+        material_type: materialType
       });
 
       if (appliedSearchTerm.trim()) {

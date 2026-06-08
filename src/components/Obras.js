@@ -2,8 +2,10 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { FiDownload, FiFile, FiArrowUp, FiArrowDown, FiLoader, FiSearch } from 'react-icons/fi';
 import { API_BASE_URL } from '../config';
 import { authFetch } from '../auth';
+import { useMaterial } from '../MaterialContext';
 
 const Obras = () => {
+  const { materialType } = useMaterial();
   const [searchTerm, setSearchTerm] = useState('');
   const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
   const [sortField, setSortField] = useState('');
@@ -28,7 +30,8 @@ const Obras = () => {
       
       const params = new URLSearchParams({
         page: page.toString(),
-        per_page: pageSize.toString()
+        per_page: pageSize.toString(),
+        material_type: materialType
       });
       if (codigo) params.append('codigo', codigo);
       if (descricao) params.append('descricao', descricao);
@@ -61,7 +64,8 @@ const Obras = () => {
     setExportingPDF(true);
     try {
       const params = new URLSearchParams({
-        type: 'produtos-obras'
+        type: 'produtos-obras',
+        material_type: materialType
       });
       
       // Add search term as a general filter (could be codigo, descricao, or obra)
@@ -111,7 +115,8 @@ const Obras = () => {
     setExportingExcel(true);
     try {
       const params = new URLSearchParams({
-        type: 'produtos-obras'
+        type: 'produtos-obras',
+        material_type: materialType
       });
       
       // Add search term as a general filter (could be codigo, descricao, or obra)

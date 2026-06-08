@@ -2,8 +2,10 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { FiUpload, FiFile, FiArrowUp, FiArrowDown, FiDownload, FiChevronLeft, FiChevronRight, FiX, FiSearch } from 'react-icons/fi';
 import { API_BASE_URL } from '../config';
 import { authFetch } from '../auth';
+import { useMaterial } from '../MaterialContext';
 
 const Import = () => {
+  const { materialType } = useMaterial();
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedType, setSelectedType] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -101,7 +103,7 @@ const Import = () => {
   const fetchFiles = async (page = 1, perPage = itemsPerPage) => {
     setLoading(true);
     try {
-      const response = await authFetch(`${API_BASE_URL}/files?page=${page}&per_page=${perPage}`);
+      const response = await authFetch(`${API_BASE_URL}/files?page=${page}&per_page=${perPage}&material_type=${materialType}`);
       
       if (response.ok) {
         const data = await response.json();
@@ -190,6 +192,8 @@ const Import = () => {
       if (separator) {
         formData.append('csv_separator', separator);
       }
+
+      formData.append('material_type', materialType);
       
       const response = await authFetch(`${API_BASE_URL}/upload`, {
         method: 'POST',

@@ -2,8 +2,10 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { FiDownload, FiFile, FiArrowUp, FiArrowDown, FiLoader, FiSearch } from 'react-icons/fi';
 import { API_BASE_URL } from '../config';
 import { authFetch } from '../auth';
+import { useMaterial } from '../MaterialContext';
 
 const StockControl = () => {
+  const { materialType } = useMaterial();
   const [searchTerm, setSearchTerm] = useState('');
   const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
   const [sortField, setSortField] = useState('');
@@ -30,7 +32,8 @@ const StockControl = () => {
     try {
       const params = new URLSearchParams({
         page: page.toString(),
-        per_page: pageSize.toString()
+        per_page: pageSize.toString(),
+        material_type: materialType
       });
       
       if (codigo) params.append('codigo', codigo);
@@ -77,7 +80,8 @@ const StockControl = () => {
     setExportingPDF(true);
     try {
       const params = new URLSearchParams({
-        type: 'produtos-estoque'
+        type: 'produtos-estoque',
+        material_type: materialType
       });
       
       // Add filters if search term exists
@@ -127,7 +131,8 @@ const StockControl = () => {
     setExportingExcel(true);
     try {
       const params = new URLSearchParams({
-        type: 'produtos-estoque'
+        type: 'produtos-estoque',
+        material_type: materialType
       });
       
       // Add filters if search term exists

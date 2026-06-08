@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { FiTrash } from 'react-icons/fi';
 import { API_BASE_URL } from '../config';
 import { authFetch } from '../auth';
+import { useMaterial } from '../MaterialContext';
 
 const ListarArquivos = () => {
+  const { materialType } = useMaterial();
   const [arquivos, setArquivos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -19,6 +21,7 @@ const ListarArquivos = () => {
         page: '1',
         per_page: '100',
         file_type: 'estoque-fisico',
+        material_type: materialType,
       });
       const response = await authFetch(`${API_BASE_URL}/files?${params.toString()}`);
       if (!response.ok) {
@@ -50,7 +53,7 @@ const ListarArquivos = () => {
     if (!confirm) return;
 
     try {
-      const response = await authFetch(`${API_BASE_URL}/files/${arquivoId}/estoque`, {
+      const response = await authFetch(`${API_BASE_URL}/files/${arquivoId}/estoque?material_type=${materialType}`, {
         method: 'DELETE',
       });
 

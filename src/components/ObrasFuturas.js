@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { FiArrowUp, FiArrowDown, FiLoader, FiSearch, FiDownload, FiFile } from 'react-icons/fi';
 import { API_BASE_URL } from '../config';
 import { authFetch } from '../auth';
+import { useMaterial } from '../MaterialContext';
 
 /**
  * Página Estoque Obras Futuras
@@ -27,6 +28,7 @@ import { authFetch } from '../auth';
  * }
  */
 const ObrasFuturas = () => {
+  const { materialType } = useMaterial();
   const [searchTerm, setSearchTerm] = useState('');
   const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
   const [sortField, setSortField] = useState('');
@@ -49,7 +51,8 @@ const ObrasFuturas = () => {
 
       const params = new URLSearchParams({
         page: page.toString(),
-        per_page: pageSize.toString()
+        per_page: pageSize.toString(),
+        material_type: materialType
       });
       if (codigo) params.append('codigo', codigo);
       if (descricao) params.append('descricao', descricao);
@@ -76,7 +79,8 @@ const ObrasFuturas = () => {
     setExportingPDF(true);
     try {
       const params = new URLSearchParams({
-        type: 'produtos-obras-futuras'
+        type: 'produtos-obras-futuras',
+        material_type: materialType
       });
 
       // Add filters if search term exists
@@ -122,7 +126,8 @@ const ObrasFuturas = () => {
     setExportingExcel(true);
     try {
       const params = new URLSearchParams({
-        type: 'produtos-obras-futuras'
+        type: 'produtos-obras-futuras',
+        material_type: materialType
       });
 
       // Add filters if search term exists

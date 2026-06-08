@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { FiTrash } from 'react-icons/fi';
 import { API_BASE_URL } from '../config';
 import { authFetch } from '../auth';
+import { useMaterial } from '../MaterialContext';
 
 /**
  * Componente para listar obras futuras.
  * Por enquanto, utiliza o mesmo endpoint de ListarObras.
  */
 const ListarObrasFuturas = () => {
+  const { materialType } = useMaterial();
   const [obras, setObras] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -44,7 +46,7 @@ const ListarObrasFuturas = () => {
       setLoading(true);
       setError(null);
 
-      const response = await authFetch(`${API_BASE_URL}/obras/all?is_obra_futura=true`);
+      const response = await authFetch(`${API_BASE_URL}/obras/all?is_obra_futura=true&material_type=${materialType}`);
 
       if (!response.ok) {
         throw new Error(`Erro na requisição: ${response.status}`);
@@ -70,7 +72,7 @@ const ListarObrasFuturas = () => {
     if (!confirm) return;
 
     try {
-      const response = await authFetch(`${API_BASE_URL}/obras/${obraId}`, {
+      const response = await authFetch(`${API_BASE_URL}/obras/${obraId}?material_type=${materialType}`, {
         method: 'DELETE',
       });
       if (!response.ok) {

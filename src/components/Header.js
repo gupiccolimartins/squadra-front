@@ -1,8 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FiHome } from 'react-icons/fi';
 import { clearToken } from '../auth';
+import { useMaterial } from '../MaterialContext';
+
+const MATERIAL_LABELS = {
+  pvc: 'PVC',
+  aluminio: 'Alumínio',
+};
+
+const MATERIAL_COLORS = {
+  pvc: { background: '#dbeafe', color: '#1d4ed8' },
+  aluminio: { background: '#ede9fe', color: '#6d28d9' },
+};
 
 const Header = ({ currentPage, setCurrentPage }) => {
+  const { materialType, clearMaterial } = useMaterial();
   const [showEstoquesMenu, setShowEstoquesMenu] = useState(false);
   const [showObrasMenu, setShowObrasMenu] = useState(false);
   const estoquesRef = useRef(null);
@@ -139,7 +151,29 @@ const Header = ({ currentPage, setCurrentPage }) => {
           </button>
           <span> / {getPageTitle()}</span>
         </div>
-        <button className="nav-item" onClick={handleLogout} style={{ marginLeft: 12 }}>
+        {materialType && (
+          <span
+            style={{
+              marginLeft: 16,
+              padding: '4px 10px',
+              borderRadius: 12,
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              ...MATERIAL_COLORS[materialType],
+            }}
+          >
+            {MATERIAL_LABELS[materialType] || materialType}
+          </span>
+        )}
+        <button
+          className="nav-item"
+          onClick={clearMaterial}
+          style={{ marginLeft: 8, fontSize: '0.85rem' }}
+          title="Trocar sistema"
+        >
+          Trocar
+        </button>
+        <button className="nav-item" onClick={handleLogout} style={{ marginLeft: 8 }}>
           Sair
         </button>
       </div>
