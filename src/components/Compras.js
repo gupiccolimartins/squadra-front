@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { FiArrowUp, FiArrowDown, FiLoader, FiDownload, FiFile, FiSearch } from 'react-icons/fi';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { FiArrowUp, FiArrowDown, FiLoader, FiDownload, FiFile, FiSearch, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { API_BASE_URL } from '../config';
 import { authFetch } from '../auth';
 import { useMaterial } from '../MaterialContext';
@@ -41,6 +41,41 @@ const Compras = () => {
   // Export loading states
   const [exportingPDF, setExportingPDF] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
+
+  const topScrollRef = useRef(null);
+  const tableScrollRef = useRef(null);
+  const isSyncingScroll = useRef(false);
+
+  const COL_CODIGO = 110;
+  const COL_PRODUTO = 180;
+  const COL_ESTOQUE = 120;
+  const COL_CONSUMO = 120;
+  const COL_SALDO_INTER = 140;
+  const COL_COMPRA = 130;
+  const COL_SALDO_COMPRAS = 150;
+
+  const syncHorizontalScroll = (source) => (e) => {
+    if (isSyncingScroll.current) return;
+    isSyncingScroll.current = true;
+    const { scrollLeft } = e.target;
+    if (source === 'top' && tableScrollRef.current) {
+      tableScrollRef.current.scrollLeft = scrollLeft;
+    }
+    if (source === 'table' && topScrollRef.current) {
+      topScrollRef.current.scrollLeft = scrollLeft;
+    }
+    isSyncingScroll.current = false;
+  };
+
+  const scrollComprasBy = (direction) => {
+    const amount = COL_COMPRA * 2 * direction;
+    const topEl = topScrollRef.current;
+    const tableEl = tableScrollRef.current;
+    if (!topEl && !tableEl) return;
+    const nextLeft = (topEl || tableEl).scrollLeft + amount;
+    if (topEl) topEl.scrollLeft = nextLeft;
+    if (tableEl) tableEl.scrollLeft = nextLeft;
+  };
 
   // Função para buscar dados da API
   const fetchCompras = async (page = 1, pageSize = 10, codigo = null, descricao = null) => {
@@ -271,6 +306,11 @@ const Compras = () => {
     return 'badge-green';
   };
 
+  const leftStickyWidth =
+    COL_CODIGO + COL_PRODUTO + COL_ESTOQUE + COL_CONSUMO + COL_SALDO_INTER;
+  const tableWidth =
+    leftStickyWidth + uniqueCompras.length * COL_COMPRA + COL_SALDO_COMPRAS;
+
   return (
     <div className="stock-control">
       <style>
@@ -280,79 +320,201 @@ const Compras = () => {
             to { transform: rotate(360deg); }
           }
 
-          /* Adaptar estilos de scroll para compras (máx 5 colunas visíveis) */
-          .compras-header-container {
-            padding: 0;
-            position: relative;
-            width: ${Math.min(uniqueCompras.length, 5) * 120}px;
-            max-width: ${Math.min(uniqueCompras.length, 5) * 120}px;
-            border-left: 1px solid #e2e8f0;
+          .stock-control .table-container {
+            overflow: visible;
           }
-          .compras-header-scroll {
+
+          .stock-control .table-scroll-bar {
             display: flex;
-            overflow-x: auto;
-            scrollbar-width: thin;
-            scrollbar-color: #cbd5e0 #f7fafc;
-            max-width: ${5 * 120}px;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 6px;
           }
-          .compras-header-scroll::-webkit-scrollbar {
-            height: 6px;
-          }
-          .compras-header-scroll::-webkit-scrollbar-track {
-            background: #f7fafc;
-            border-radius: 3px;
-          }
-          .compras-header-scroll::-webkit-scrollbar-thumb {
-            background: #cbd5e0;
-            border-radius: 3px;
-          }
-          .compras-header-scroll::-webkit-scrollbar-thumb:hover {
-            background: #a0aec0;
-          }
-          .compra-header-item {
-            min-width: 120px;
-            max-width: 120px;
-            padding: 12px 8px;
-            text-align: center;
-            cursor: pointer;
-            border-right: 1px solid #e2e8f0;
-            background: #f8f9fa;
-            font-weight: 600;
-            white-space: normal;
-            word-break: break-word;
-            display: flex;
-            flex-direction: column;
+
+          .stock-control .table-scroll-arrow {
+            flex-shrink: 0;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 4px;
-            flex-shrink: 0;
-          }
-          .compra-header-item:hover { background: #e2e8f0; }
-
-          .compras-data-container {
-            position: relative;
-            width: ${Math.min(uniqueCompras.length, 5) * 120}px;
-            max-width: ${Math.min(uniqueCompras.length, 5) * 120}px;
+            width: 28px;
+            height: 28px;
+            border: 1px solid #cbd5e1;
+            background: #f1f5f9;
+            color: #334155;
+            border-radius: 6px;
+            cursor: pointer;
             padding: 0;
-            border-left: 1px solid #e2e8f0;
+            transition: background 0.15s ease, border-color 0.15s ease;
           }
-          .compras-data-scroll {
-            display: flex;
+
+          .stock-control .table-scroll-arrow:hover {
+            background: #e2e8f0;
+            border-color: #94a3b8;
+            color: #0f172a;
+          }
+
+          .stock-control .table-scroll-arrow:active {
+            background: #cbd5e1;
+          }
+
+          .stock-control .table-scroll-top {
+            flex: 1;
+            min-width: 0;
+            overflow-x: scroll;
+            overflow-y: hidden;
+            height: 18px;
+            background: #e2e8f0;
+            border-radius: 6px;
+            scrollbar-width: auto;
+            scrollbar-color: #64748b #e2e8f0;
+          }
+
+          .stock-control .table-scroll-top::-webkit-scrollbar {
+            -webkit-appearance: none;
+            height: 14px;
+            display: block;
+          }
+
+          .stock-control .table-scroll-top::-webkit-scrollbar-track {
+            background: #e2e8f0;
+            border-radius: 6px;
+          }
+
+          .stock-control .table-scroll-top::-webkit-scrollbar-thumb {
+            background: #64748b;
+            border-radius: 6px;
+            border: 2px solid #e2e8f0;
+            min-width: 40px;
+          }
+
+          .stock-control .table-scroll-top::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+          }
+
+          .stock-control .table-scroll-top-spacer {
+            height: 1px;
+            pointer-events: none;
+          }
+
+          .stock-control .table-wrapper {
+            position: relative;
             overflow-x: auto;
+            overflow-y: visible;
+            border-radius: 8px;
             scrollbar-width: none;
             -ms-overflow-style: none;
-            max-width: ${5 * 120}px;
           }
-          .compras-data-scroll::-webkit-scrollbar { display: none; }
-          .compra-data-item {
-            min-width: 120px;
-            padding: 12px 8px;
+
+          .stock-control .table-wrapper::-webkit-scrollbar {
+            display: none;
+          }
+
+          .stock-control .stock-table {
+            width: ${tableWidth}px;
+            min-width: ${tableWidth}px;
+            max-width: none;
+            table-layout: fixed;
+            border-collapse: separate;
+            border-spacing: 0;
+          }
+
+          .stock-control .stock-table th,
+          .stock-control .stock-table td {
+            box-sizing: border-box;
+            overflow: hidden;
+          }
+
+          .stock-control .stock-table th.sticky-col,
+          .stock-control .stock-table td.sticky-col {
+            position: sticky !important;
+            z-index: 3;
+            background: #fff;
+          }
+
+          .stock-control .stock-table thead th.sticky-col {
+            background: #f8f9fa;
+            z-index: 5;
+          }
+
+          .stock-control .stock-table tbody tr:nth-child(even) td.sticky-col {
+            background: #fdfdfd;
+          }
+
+          .stock-control .stock-table tbody tr:hover td.sticky-col {
+            background: #f8f9fa;
+          }
+
+          .stock-control .stock-table .sticky-col-codigo {
+            left: 0;
+            width: ${COL_CODIGO}px;
+            min-width: ${COL_CODIGO}px;
+            max-width: ${COL_CODIGO}px;
+          }
+
+          .stock-control .stock-table .sticky-col-produto {
+            left: ${COL_CODIGO}px;
+            width: ${COL_PRODUTO}px;
+            min-width: ${COL_PRODUTO}px;
+            max-width: ${COL_PRODUTO}px;
+          }
+
+          .stock-control .stock-table .sticky-col-estoque {
+            left: ${COL_CODIGO + COL_PRODUTO}px;
+            width: ${COL_ESTOQUE}px;
+            min-width: ${COL_ESTOQUE}px;
+            max-width: ${COL_ESTOQUE}px;
+          }
+
+          .stock-control .stock-table .sticky-col-consumo {
+            left: ${COL_CODIGO + COL_PRODUTO + COL_ESTOQUE}px;
+            width: ${COL_CONSUMO}px;
+            min-width: ${COL_CONSUMO}px;
+            max-width: ${COL_CONSUMO}px;
+          }
+
+          .stock-control .stock-table .sticky-col-saldo-inter {
+            left: ${COL_CODIGO + COL_PRODUTO + COL_ESTOQUE + COL_CONSUMO}px;
+            width: ${COL_SALDO_INTER}px;
+            min-width: ${COL_SALDO_INTER}px;
+            max-width: ${COL_SALDO_INTER}px;
+            box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.12);
+          }
+
+          .stock-control .stock-table .sticky-col-saldo-compras {
+            right: 0;
+            width: ${COL_SALDO_COMPRAS}px;
+            min-width: ${COL_SALDO_COMPRAS}px;
+            max-width: ${COL_SALDO_COMPRAS}px;
+            box-shadow: -2px 0 4px -2px rgba(0, 0, 0, 0.12);
+          }
+
+          .stock-control .stock-table th.compra-col,
+          .stock-control .stock-table td.compra-col {
+            width: ${COL_COMPRA}px;
+            min-width: ${COL_COMPRA}px;
+            max-width: ${COL_COMPRA}px;
             text-align: center;
             border-right: 1px solid #e2e8f0;
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            position: static !important;
+          }
+
+          .stock-control .stock-table th.compra-col-header {
+            background: #f8f9fa;
+            font-weight: 600;
+            vertical-align: middle;
+            white-space: normal;
+            word-break: break-word;
+            font-size: 12px;
+            line-height: 1.25;
+            padding: 10px 6px;
+          }
+
+          .stock-control .stock-table th.compra-col-header:hover {
+            background: #e2e8f0;
+          }
+
+          .stock-control .stock-table th.sortable::after {
+            display: none;
           }
 
           .search-group {
@@ -472,89 +634,130 @@ const Compras = () => {
           </div>
         )}
 
-        <table className="stock-table">
-          <thead>
-            <tr>
-              <th className="sortable fixed-column" onClick={() => handleSort('codigo')}>
-                Código {sortField === 'codigo' && (sortDirection === 'asc' ? <FiArrowUp size={12} /> : <FiArrowDown size={12} />)}
-              </th>
-              <th className="sortable fixed-column" onClick={() => handleSort('descricao')}>
-                Produto {sortField === 'descricao' && (sortDirection === 'asc' ? <FiArrowUp size={12} /> : <FiArrowDown size={12} />)}
-              </th>
-              <th className="sortable fixed-column" onClick={() => handleSort('estoqueAtual')}>
-                Estoque Atual {sortField === 'estoqueAtual' && (sortDirection === 'asc' ? <FiArrowUp size={12} /> : <FiArrowDown size={12} />)}
-              </th>
-              <th className="sortable fixed-column" onClick={() => handleSort('consumoObras')}>
-                Consumo Obras {sortField === 'consumoObras' && (sortDirection === 'asc' ? <FiArrowUp size={12} /> : <FiArrowDown size={12} />)}
-              </th>
-              <th className="sortable fixed-column" onClick={() => handleSort('estoquePosObras')}>
-                Saldo Intermediário {sortField === 'estoquePosObras' && (sortDirection === 'asc' ? <FiArrowUp size={12} /> : <FiArrowDown size={12} />)}
-              </th>
-              {/* Colunas dinâmicas de compras */}
-              <th className="compras-header-container">
-                <div className="compras-header-scroll" onScroll={(e) => {
-                  const scrollLeft = e.target.scrollLeft;
-                  document.querySelectorAll('.compras-data-scroll').forEach(el => {
-                    if (el !== e.target) el.scrollLeft = scrollLeft;
-                  });
-                }}>
-                  {uniqueCompras.map((compra) => (
-                    <div key={compra.descricao} className="compra-header-item" onClick={() => handleSort(compra.descricao)}>
-                      {compra.descricao}
-                      {sortField === compra.descricao && (sortDirection === 'asc' ? <FiArrowUp size={12} /> : <FiArrowDown size={12} />)}
-                    </div>
-                  ))}
-                </div>
-              </th>
-              <th className="sortable fixed-column" onClick={() => handleSort('estoquePosCompras')}>
-                Saldo Após Compras {sortField === 'estoquePosCompras' && (sortDirection === 'asc' ? <FiArrowUp size={12} /> : <FiArrowDown size={12} />)}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {error && (
+        <div className="table-scroll-bar">
+          <button
+            type="button"
+            className="table-scroll-arrow"
+            onClick={() => scrollComprasBy(-1)}
+            title="Rolar para a esquerda"
+            aria-label="Rolar colunas para a esquerda"
+          >
+            <FiChevronLeft size={18} />
+          </button>
+          <div
+            className="table-scroll-top"
+            ref={topScrollRef}
+            onScroll={syncHorizontalScroll('top')}
+          >
+            <div
+              className="table-scroll-top-spacer"
+              style={{ width: tableWidth }}
+            />
+          </div>
+          <button
+            type="button"
+            className="table-scroll-arrow"
+            onClick={() => scrollComprasBy(1)}
+            title="Rolar para a direita"
+            aria-label="Rolar colunas para a direita"
+          >
+            <FiChevronRight size={18} />
+          </button>
+        </div>
+
+        <div
+          className="table-wrapper"
+          ref={tableScrollRef}
+          onScroll={syncHorizontalScroll('table')}
+        >
+          <table className="stock-table">
+            <colgroup>
+              <col style={{ width: COL_CODIGO }} />
+              <col style={{ width: COL_PRODUTO }} />
+              <col style={{ width: COL_ESTOQUE }} />
+              <col style={{ width: COL_CONSUMO }} />
+              <col style={{ width: COL_SALDO_INTER }} />
+              {uniqueCompras.map((compra) => (
+                <col key={`col-${compra.descricao}`} style={{ width: COL_COMPRA }} />
+              ))}
+              <col style={{ width: COL_SALDO_COMPRAS }} />
+            </colgroup>
+            <thead>
               <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: '20px', color: 'red' }}>
-                  Erro ao carregar dados: {error}
-                </td>
+                <th className="sortable sticky-col sticky-col-codigo" onClick={() => handleSort('codigo')}>
+                  Código {sortField === 'codigo' && (sortDirection === 'asc' ? <FiArrowUp size={12} /> : <FiArrowDown size={12} />)}
+                </th>
+                <th className="sortable sticky-col sticky-col-produto" onClick={() => handleSort('descricao')}>
+                  Produto {sortField === 'descricao' && (sortDirection === 'asc' ? <FiArrowUp size={12} /> : <FiArrowDown size={12} />)}
+                </th>
+                <th className="sortable sticky-col sticky-col-estoque" onClick={() => handleSort('estoqueAtual')}>
+                  Estoque Atual {sortField === 'estoqueAtual' && (sortDirection === 'asc' ? <FiArrowUp size={12} /> : <FiArrowDown size={12} />)}
+                </th>
+                <th className="sortable sticky-col sticky-col-consumo" onClick={() => handleSort('consumoObras')}>
+                  Consumo Obras {sortField === 'consumoObras' && (sortDirection === 'asc' ? <FiArrowUp size={12} /> : <FiArrowDown size={12} />)}
+                </th>
+                <th className="sortable sticky-col sticky-col-saldo-inter" onClick={() => handleSort('estoquePosObras')}>
+                  Saldo Intermediário {sortField === 'estoquePosObras' && (sortDirection === 'asc' ? <FiArrowUp size={12} /> : <FiArrowDown size={12} />)}
+                </th>
+                {uniqueCompras.map((compra) => (
+                  <th
+                    key={compra.descricao}
+                    className="sortable compra-col compra-col-header"
+                    onClick={() => handleSort(compra.descricao)}
+                    title={compra.descricao}
+                  >
+                    {compra.descricao}
+                    {sortField === compra.descricao && (sortDirection === 'asc' ? <FiArrowUp size={12} /> : <FiArrowDown size={12} />)}
+                  </th>
+                ))}
+                <th className="sortable sticky-col sticky-col-saldo-compras" onClick={() => handleSort('estoquePosCompras')}>
+                  Saldo Após Compras {sortField === 'estoquePosCompras' && (sortDirection === 'asc' ? <FiArrowUp size={12} /> : <FiArrowDown size={12} />)}
+                </th>
               </tr>
-            )}
-            {sortedData.length === 0 && !loading && !error && (
-              <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>Nenhum item encontrado</td>
-              </tr>
-            )}
-            {sortedData.map((item, idx) => (
-              <tr key={item.codigo || idx}>
-                <td className="fixed-column">{item.codigo}</td>
-                <td className="fixed-column">{item.descricao}</td>
-                <td className="fixed-column"><span className="status-badge badge-blue">{formatNumber(item.estoqueAtual)}</span></td>
-                <td className="fixed-column"><span className="status-badge badge-purple">{formatNumber(item.consumoObras)}</span></td>
-                <td className="fixed-column"><span className={`status-badge ${getBadgeClass(item.estoquePosObras)}`}>{formatNumber(item.estoquePosObras)}</span></td>
-                {/* Dados compras */}
-                <td className="compras-data-container">
-                  <div className="compras-data-scroll" onScroll={(e) => {
-                    const scrollLeft = e.target.scrollLeft;
-                    document.querySelectorAll('.compras-header-scroll').forEach(el => {
-                      if (el !== e.target) el.scrollLeft = scrollLeft;
-                    });
-                  }}>
-                    {uniqueCompras.map(compra => {
-                      const comp = (item.compras || []).find(c => c.descricao === compra.descricao);
-                      const qtd = comp ? comp.quantidade_comprada : 0;
-                      return (
-                        <div key={compra.descricao} className="compra-data-item">
-                          {qtd > 0 ? <span className="status-badge badge-green">{formatNumber(qtd)}</span> : <span className="empty-cell">-</span>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </td>
-                <td className="fixed-column"><span className={`status-badge ${getBadgeClass(item.estoquePosCompras)}`}>{formatNumber(item.estoquePosCompras)}</span></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {error && (
+                <tr>
+                  <td colSpan={6 + uniqueCompras.length} style={{ textAlign: 'center', padding: '20px', color: 'red' }}>
+                    Erro ao carregar dados: {error}
+                  </td>
+                </tr>
+              )}
+              {sortedData.length === 0 && !loading && !error && (
+                <tr>
+                  <td colSpan={6 + uniqueCompras.length} style={{ textAlign: 'center', padding: '20px' }}>Nenhum item encontrado</td>
+                </tr>
+              )}
+              {sortedData.map((item, idx) => (
+                <tr key={item.codigo || idx}>
+                  <td className="sticky-col sticky-col-codigo">{item.codigo}</td>
+                  <td className="sticky-col sticky-col-produto">{item.descricao}</td>
+                  <td className="sticky-col sticky-col-estoque">
+                    <span className="status-badge badge-blue">{formatNumber(item.estoqueAtual)}</span>
+                  </td>
+                  <td className="sticky-col sticky-col-consumo">
+                    <span className="status-badge badge-purple">{formatNumber(item.consumoObras)}</span>
+                  </td>
+                  <td className="sticky-col sticky-col-saldo-inter">
+                    <span className={`status-badge ${getBadgeClass(item.estoquePosObras)}`}>{formatNumber(item.estoquePosObras)}</span>
+                  </td>
+                  {uniqueCompras.map(compra => {
+                    const comp = (item.compras || []).find(c => c.descricao === compra.descricao);
+                    const qtd = comp ? comp.quantidade_comprada : 0;
+                    return (
+                      <td key={compra.descricao} className="compra-col">
+                        {qtd > 0 ? <span className="status-badge badge-green">{formatNumber(qtd)}</span> : <span className="empty-cell">-</span>}
+                      </td>
+                    );
+                  })}
+                  <td className="sticky-col sticky-col-saldo-compras">
+                    <span className={`status-badge ${getBadgeClass(item.estoquePosCompras)}`}>{formatNumber(item.estoquePosCompras)}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Paginação */}
