@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { FiTrash, FiCheckCircle } from 'react-icons/fi';
+import { FiTrash, FiCheckCircle, FiEdit2, FiX } from 'react-icons/fi';
 import { API_BASE_URL } from '../config';
 import { authFetch } from '../auth';
 import { useMaterial } from '../MaterialContext';
 
 /**
  * Componente para listar obras.
- * - Exibe uma tabela com nome, status, link para listar produtos e botões para finalizar ou remover.
- * - Os dados são carregados do backend (endpoint GET /obras).
- * - Ao clicar em "Listar produtos", um modal é aberto e lista os produtos da obra.
+ * - Exibe uma tabela com nome, status e botões para editar nome, finalizar ou remover.
+ * - Os dados são carregados do backend (endpoint GET /obras/all).
+ * - Ao clicar no ícone de lápis, abre modal para alterar o nome da obra via PATCH /obras/:id.
  * - Ao clicar no ícone de check, a obra é finalizada via PATCH /obras/:id/status?status_update=finished.
  * - Ao clicar no ícone de lixeira, a obra é removida via DELETE /obras/:id.
  */
@@ -18,8 +18,15 @@ const ListarObras = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingObra, setEditingObra] = useState(null);
+  const [editName, setEditName] = useState('');
+  const [saving, setSaving] = useState(false);
+
   // Verifica se as obras retornam um _id (detalhado) ou não (lista resumida)
   const hasId = obras.length > 0 && obras[0]._id !== undefined;
+
+  const getObraName = (obra) => obra?.description ?? obra?.nome ?? obra?.descricao ?? '';
 
   // Função auxiliar para renderizar badge de status
   const renderStatusBadge = (status, isObraFutura) => {
@@ -117,6 +124,69 @@ const ListarObras = () => {
     }
   };
 
+  const openEditModal = (obra) => {
+    setEditingObra(obra);
+    setEditName(getObraName(obra));
+    setShowEditModal(true);
+  };
+
+  const closeEditModal = () => {
+    if (saving) return;
+    setShowEditModal(false);
+    setEditingObra(null);
+    setEditName('');
+  };
+
+  /**
+   * Atualiza o nome (descricao) da obra no banco e na lista local.
+   * A API esperada é PATCH /obras/:id com body { descricao }.
+   */
+  const handleSaveName = async () => {
+    const trimmedName = editName.trim();
+    if (!editingObra || !trimmedName) {
+      alert('O nome da obra não pode ser vazio.');
+      return;
+    }
+
+    if (trimmedName === getObraName(editingObra)) {
+      closeEditModal();
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const response = await authFetch(
+        `${API_BASE_URL}/obras/${editingObra._id}?material_type=${materialType}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ descricao: trimmedName }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Erro na requisição: ${response.status}`);
+      }
+
+      setObras((prev) =>
+        prev.map((obra) =>
+          obra._id === editingObra._id
+            ? { ...obra, description: trimmedName, descricao: trimmedName }
+            : obra
+        )
+      );
+      setShowEditModal(false);
+      setEditingObra(null);
+      setEditName('');
+    } catch (err) {
+      console.error('Erro ao renomear obra:', err);
+      alert(err.message || 'Erro ao renomear obra. Tente novamente.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return <div className="page-placeholder">Carregando obras...</div>;
   }
@@ -144,10 +214,16 @@ const ListarObras = () => {
             <tbody>
               {obras.map((obra, index) => (
                 <tr key={hasId ? obra._id : index}>
-                  <td>{obra.description ?? obra.nome ?? obra.descricao}</td>
+                  <td>{getObraName(obra)}</td>
                   <td>{renderStatusBadge(obra.status, obra.is_obra_futura)}</td>
                   {hasId && (
                     <td>
+                      <FiEdit2
+                        size={18}
+                        className="edit-icon"
+                        title="Editar nome da obra"
+                        onClick={() => openEditModal(obra)}
+                      />
                       {obra.status !== 'finished' && (
                         <FiCheckCircle
                           size={18}
@@ -171,6 +247,62 @@ const ListarObras = () => {
         </div>
       )}
 
+      {showEditModal && (
+        <div className="modal-overlay" onClick={closeEditModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Editar nome da obra</h3>
+              <button
+                className="modal-close-btn"
+                onClick={closeEditModal}
+                type="button"
+                disabled={saving}
+              >
+                <FiX size={20} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="form-group">
+                <label htmlFor="obra-edit-name">Nome da obra:</label>
+                <input
+                  type="text"
+                  id="obra-edit-name"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveName();
+                  }}
+                  placeholder="Digite o nome da obra..."
+                  className="obra-name-input"
+                  autoFocus
+                  disabled={saving}
+                />
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn-cancel"
+                onClick={closeEditModal}
+                disabled={saving}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn-confirm"
+                onClick={handleSaveName}
+                disabled={saving || !editName.trim()}
+              >
+                {saving ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Estilos inline para simplicidade */}
       <style>{`
         .listar-obras {
@@ -191,6 +323,14 @@ const ListarObras = () => {
           font: inherit;
         }
         .link-button:hover {
+          color: #2b6cb0;
+        }
+        .edit-icon {
+          cursor: pointer;
+          color: #3182ce;
+          margin-right: 8px;
+        }
+        .edit-icon:hover {
           color: #2b6cb0;
         }
         .finalize-icon {
