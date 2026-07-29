@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { FiDownload, FiFile, FiArrowUp, FiArrowDown, FiLoader, FiSearch } from 'react-icons/fi';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { FiDownload, FiFile, FiArrowUp, FiArrowDown, FiLoader, FiSearch, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { API_BASE_URL } from '../config';
 import { authFetch } from '../auth';
 import { useMaterial } from '../MaterialContext';
@@ -21,6 +21,39 @@ const Obras = () => {
   // Export loading states
   const [exportingPDF, setExportingPDF] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
+
+  const topScrollRef = useRef(null);
+  const tableScrollRef = useRef(null);
+  const isSyncingScroll = useRef(false);
+
+  const COL_CODIGO = 120;
+  const COL_PRODUTO = 200;
+  const COL_ESTOQUE = 130;
+  const COL_OBRA = 130;
+  const COL_SALDO = 150;
+
+  const syncHorizontalScroll = (source) => (e) => {
+    if (isSyncingScroll.current) return;
+    isSyncingScroll.current = true;
+    const { scrollLeft } = e.target;
+    if (source === 'top' && tableScrollRef.current) {
+      tableScrollRef.current.scrollLeft = scrollLeft;
+    }
+    if (source === 'table' && topScrollRef.current) {
+      topScrollRef.current.scrollLeft = scrollLeft;
+    }
+    isSyncingScroll.current = false;
+  };
+
+  const scrollObrasBy = (direction) => {
+    const amount = COL_OBRA * 2 * direction;
+    const topEl = topScrollRef.current;
+    const tableEl = tableScrollRef.current;
+    if (!topEl && !tableEl) return;
+    const nextLeft = (topEl || tableEl).scrollLeft + amount;
+    if (topEl) topEl.scrollLeft = nextLeft;
+    if (tableEl) tableEl.scrollLeft = nextLeft;
+  };
 
   // Função para buscar obras da API (sempre obras ativas)
   const fetchObras = async (page = 1, pageSize = 10, codigo = null, descricao = null) => {
@@ -338,6 +371,9 @@ const Obras = () => {
     }
   };
 
+  const tableWidth =
+    COL_CODIGO + COL_PRODUTO + COL_ESTOQUE + uniqueObras.length * COL_OBRA + COL_SALDO;
+
   return (
     <div className="stock-control">
       <style>
@@ -347,135 +383,201 @@ const Obras = () => {
             to { transform: rotate(360deg); }
           }
           
-          .table-wrapper {
-            position: relative;
-            overflow: hidden;
-            border-radius: 8px;
+          .stock-control .table-container {
+            overflow: visible;
           }
-          
-          .stock-table {
-            width: 100%;
-            table-layout: fixed;
-          }
-          
-          .fixed-column {
-            position: relative;
-            z-index: 2;
-          }
-          
-          .obras-header-container {
-            padding: 0;
-            position: relative;
-            width: ${Math.min(uniqueObras.length, 7) * 120}px;
-            max-width: ${Math.min(uniqueObras.length, 7) * 120}px;
-          }
-          
-          .obras-header-scroll {
+
+          .stock-control .table-scroll-bar {
             display: flex;
-            overflow-x: auto;
-            scrollbar-width: thin;
-            scrollbar-color: #cbd5e0 #f7fafc;
-            max-width: ${7 * 120}px;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 6px;
           }
-          
-          .obras-header-scroll::-webkit-scrollbar {
-            height: 6px;
-          }
-          
-          .obras-header-scroll::-webkit-scrollbar-track {
-            background: #f7fafc;
-            border-radius: 3px;
-          }
-          
-          .obras-header-scroll::-webkit-scrollbar-thumb {
-            background: #cbd5e0;
-            border-radius: 3px;
-          }
-          
-          .obras-header-scroll::-webkit-scrollbar-thumb:hover {
-            background: #a0aec0;
-          }
-          
-          .obra-header-item {
-            min-width: 120px;
-            max-width: 120px;
-            padding: 12px 8px;
-            text-align: center;
+
+          .stock-control .table-scroll-arrow {
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border: 1px solid #cbd5e1;
+            background: #f1f5f9;
+            color: #334155;
+            border-radius: 6px;
             cursor: pointer;
+            padding: 0;
+            transition: background 0.15s ease, border-color 0.15s ease;
+          }
+
+          .stock-control .table-scroll-arrow:hover {
+            background: #e2e8f0;
+            border-color: #94a3b8;
+            color: #0f172a;
+          }
+
+          .stock-control .table-scroll-arrow:active {
+            background: #cbd5e1;
+          }
+
+          .stock-control .table-scroll-top {
+            flex: 1;
+            min-width: 0;
+            overflow-x: scroll;
+            overflow-y: hidden;
+            height: 18px;
+            background: #e2e8f0;
+            border-radius: 6px;
+            scrollbar-width: auto;
+            scrollbar-color: #64748b #e2e8f0;
+          }
+
+          .stock-control .table-scroll-top::-webkit-scrollbar {
+            -webkit-appearance: none;
+            height: 14px;
+            display: block;
+          }
+
+          .stock-control .table-scroll-top::-webkit-scrollbar-track {
+            background: #e2e8f0;
+            border-radius: 6px;
+          }
+
+          .stock-control .table-scroll-top::-webkit-scrollbar-thumb {
+            background: #64748b;
+            border-radius: 6px;
+            border: 2px solid #e2e8f0;
+            min-width: 40px;
+          }
+
+          .stock-control .table-scroll-top::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+          }
+
+          .stock-control .table-scroll-top-spacer {
+            height: 1px;
+            pointer-events: none;
+          }
+
+          .stock-control .table-wrapper {
+            position: relative;
+            overflow-x: auto;
+            overflow-y: visible;
+            border-radius: 8px;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+          }
+
+          .stock-control .table-wrapper::-webkit-scrollbar {
+            display: none;
+          }
+          
+          .stock-control .stock-table {
+            width: ${tableWidth}px;
+            min-width: ${tableWidth}px;
+            max-width: none;
+            table-layout: fixed;
+            border-collapse: separate;
+            border-spacing: 0;
+          }
+
+          .stock-control .stock-table th,
+          .stock-control .stock-table td {
+            box-sizing: border-box;
+            overflow: hidden;
+          }
+
+          /* Override App.css th { position: relative; width/max-width } */
+          .stock-control .stock-table th.sticky-col,
+          .stock-control .stock-table td.sticky-col {
+            position: sticky !important;
+            z-index: 3;
+            background: #fff;
+          }
+
+          .stock-control .stock-table thead th.sticky-col {
+            background: #f8f9fa;
+            z-index: 5;
+          }
+
+          .stock-control .stock-table tbody tr:nth-child(even) td.sticky-col {
+            background: #fdfdfd;
+          }
+
+          .stock-control .stock-table tbody tr:hover td.sticky-col {
+            background: #f8f9fa;
+          }
+
+          .stock-control .stock-table .sticky-col-codigo {
+            left: 0;
+            width: ${COL_CODIGO}px;
+            min-width: ${COL_CODIGO}px;
+            max-width: ${COL_CODIGO}px;
+          }
+
+          .stock-control .stock-table .sticky-col-produto {
+            left: ${COL_CODIGO}px;
+            width: ${COL_PRODUTO}px;
+            min-width: ${COL_PRODUTO}px;
+            max-width: ${COL_PRODUTO}px;
+          }
+
+          .stock-control .stock-table .sticky-col-estoque {
+            left: ${COL_CODIGO + COL_PRODUTO}px;
+            width: ${COL_ESTOQUE}px;
+            min-width: ${COL_ESTOQUE}px;
+            max-width: ${COL_ESTOQUE}px;
+            box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.12);
+          }
+
+          .stock-control .stock-table .sticky-col-saldo {
+            right: 0;
+            width: ${COL_SALDO}px;
+            min-width: ${COL_SALDO}px;
+            max-width: ${COL_SALDO}px;
+            box-shadow: -2px 0 4px -2px rgba(0, 0, 0, 0.12);
+          }
+
+          .stock-control .stock-table .obras-consideradas-label {
+            text-align: left;
+            padding-left: 12px;
+            white-space: nowrap;
+            background: #fff;
+          }
+
+          .stock-control .stock-table th.obra-col,
+          .stock-control .stock-table td.obra-col {
+            width: ${COL_OBRA}px;
+            min-width: ${COL_OBRA}px;
+            max-width: ${COL_OBRA}px;
+            text-align: center;
             border-right: 1px solid #e2e8f0;
+            position: static !important;
+          }
+
+          .stock-control .stock-table th.obra-col-header {
             background: #f8f9fa;
             font-weight: 600;
+            vertical-align: middle;
             white-space: normal;
             word-break: break-word;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-            flex-shrink: 0;
+            font-size: 12px;
+            line-height: 1.25;
+            padding: 10px 6px;
           }
-          
-          .obra-header-item:hover {
+
+          .stock-control .stock-table th.obra-col-header:hover {
             background: #e2e8f0;
           }
-          
-          .obras-scroll-container {
-            padding: 0;
-            position: relative;
-            width: ${Math.min(uniqueObras.length, 7) * 120}px;
-            max-width: ${Math.min(uniqueObras.length, 7) * 120}px;
-          }
-          
-          .obras-scroll-content {
-            display: flex;
-            overflow-x: auto;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-            max-width: ${7 * 120}px;
-          }
-          
-          .obras-scroll-content::-webkit-scrollbar {
+
+          .stock-control .stock-table th.sortable::after {
             display: none;
           }
-          
-          .obra-checkbox-wrapper {
-            min-width: 120px;
+
+          .stock-control .stock-table td.obra-col-checkbox {
             padding: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-right: 1px solid #e2e8f0;
-            flex-shrink: 0;
-          }
-          
-          .obras-data-container {
-            position: relative;
-            width: ${Math.min(uniqueObras.length, 7) * 120}px;
-            max-width: ${Math.min(uniqueObras.length, 7) * 120}px;
-            padding: 0;
-          }
-          
-          .obras-data-scroll {
-            display: flex;
-            overflow-x: auto;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-            max-width: ${7 * 120}px;
-          }
-          
-          .obras-data-scroll::-webkit-scrollbar {
-            display: none;
-          }
-          
-          .obra-data-item {
-            min-width: 120px;
-            padding: 12px 8px;
-            text-align: center;
-            border-right: 1px solid #e2e8f0;
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            vertical-align: middle;
+            background: #fff;
           }
 
           .search-group {
@@ -622,47 +724,81 @@ const Obras = () => {
           </div>
         )}
         
-        <div className="table-wrapper">
+        <div className="table-scroll-bar">
+          <button
+            type="button"
+            className="table-scroll-arrow"
+            onClick={() => scrollObrasBy(-1)}
+            title="Rolar para a esquerda"
+            aria-label="Rolar colunas para a esquerda"
+          >
+            <FiChevronLeft size={18} />
+          </button>
+          <div
+            className="table-scroll-top"
+            ref={topScrollRef}
+            onScroll={syncHorizontalScroll('top')}
+          >
+            <div
+              className="table-scroll-top-spacer"
+              style={{ width: tableWidth }}
+            />
+          </div>
+          <button
+            type="button"
+            className="table-scroll-arrow"
+            onClick={() => scrollObrasBy(1)}
+            title="Rolar para a direita"
+            aria-label="Rolar colunas para a direita"
+          >
+            <FiChevronRight size={18} />
+          </button>
+        </div>
+        <div
+          className="table-wrapper"
+          ref={tableScrollRef}
+          onScroll={syncHorizontalScroll('table')}
+        >
           <table className="stock-table">
+            <colgroup>
+              <col style={{ width: COL_CODIGO }} />
+              <col style={{ width: COL_PRODUTO }} />
+              <col style={{ width: COL_ESTOQUE }} />
+              {uniqueObras.map((obra) => (
+                <col key={`col-${obra.descricao}`} style={{ width: COL_OBRA }} />
+              ))}
+              <col style={{ width: COL_SALDO }} />
+            </colgroup>
             <thead>
-              {/* Linha de obras consideradas */}
+              {/* Linha de obras consideradas — 1 célula por coluna para não quebrar larguras */}
               <tr className="obras-consideradas-row">
-                <td colSpan="3" className="obras-consideradas-label">
+                <td className="sticky-col sticky-col-codigo"></td>
+                <td className="sticky-col sticky-col-produto obras-consideradas-label">
                   <strong>Obras consideradas</strong>
                 </td>
-                {/* Container scrollável para checkboxes das obras */}
-                <td className="obras-scroll-container">
-                  <div className="obras-scroll-content" onScroll={(e) => {
-                    // Sincronizar scroll com outras seções
-                    const scrollLeft = e.target.scrollLeft;
-                    document.querySelectorAll('.obras-header-scroll, .obras-data-scroll').forEach(el => {
-                      if (el !== e.target) el.scrollLeft = scrollLeft;
-                    });
-                  }}>
-                    {uniqueObras.map((obra, index) => (
-                      <div key={`checkbox-${obra.descricao}`} className="obra-checkbox-wrapper">
-                        <div className="checkbox-container">
-                          <input
-                            type="checkbox"
-                            id={`obra-${obra.descricao}`}
-                            checked={obrasConsidered[obra.descricao] || false}
-                            onChange={() => toggleObraConsidered(obra)}
-                            className="obra-checkbox"
-                          />
-                          <label htmlFor={`obra-${obra.descricao}`} className="checkbox-label">
-                            {/* Label vazio, só visual */}
-                          </label>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </td>
-                <td colSpan="1" className="obras-consideradas-spacer"></td>
+                <td className="sticky-col sticky-col-estoque"></td>
+                {uniqueObras.map((obra) => (
+                  <td key={`checkbox-${obra.descricao}`} className="obra-col obra-col-checkbox">
+                    <div className="checkbox-container">
+                      <input
+                        type="checkbox"
+                        id={`obra-${obra.descricao}`}
+                        checked={obrasConsidered[obra.descricao] || false}
+                        onChange={() => toggleObraConsidered(obra)}
+                        className="obra-checkbox"
+                      />
+                      <label htmlFor={`obra-${obra.descricao}`} className="checkbox-label">
+                        {/* Label vazio, só visual */}
+                      </label>
+                    </div>
+                  </td>
+                ))}
+                <td className="sticky-col sticky-col-saldo obras-consideradas-spacer"></td>
               </tr>
               {/* Cabeçalho principal da tabela */}
               <tr>
-                <th 
-                  className="sortable fixed-column" 
+                <th
+                  className="sortable sticky-col sticky-col-codigo"
                   onClick={() => handleSort('codigo')}
                 >
                   Código
@@ -670,8 +806,8 @@ const Obras = () => {
                     sortDirection === 'asc' ? <FiArrowUp size={12} /> : <FiArrowDown size={12} />
                   )}
                 </th>
-                <th 
-                  className="sortable fixed-column" 
+                <th
+                  className="sortable sticky-col sticky-col-produto"
                   onClick={() => handleSort('descricao')}
                 >
                   Produto
@@ -679,8 +815,8 @@ const Obras = () => {
                     sortDirection === 'asc' ? <FiArrowUp size={12} /> : <FiArrowDown size={12} />
                   )}
                 </th>
-                <th 
-                  className="sortable fixed-column" 
+                <th
+                  className="sortable sticky-col sticky-col-estoque"
                   onClick={() => handleSort('estoqueAtual')}
                 >
                   Estoque Atual
@@ -688,32 +824,21 @@ const Obras = () => {
                     sortDirection === 'asc' ? <FiArrowUp size={12} /> : <FiArrowDown size={12} />
                   )}
                 </th>
-                {/* Container scrollável para colunas de obras */}
-                <th className="obras-header-container">
-                  <div className="obras-header-scroll" onScroll={(e) => {
-                    // Sincronizar scroll com outras seções
-                    const scrollLeft = e.target.scrollLeft;
-                    document.querySelectorAll('.obras-scroll-content, .obras-data-scroll').forEach(el => {
-                      if (el !== e.target) el.scrollLeft = scrollLeft;
-                    });
-                  }}>
-                    {uniqueObras.map((obra, index) => (
-                      <div
-                        key={obra.descricao}
-                        className="obra-header-item"
-                        onClick={() => handleSort(obra.descricao)}
-                        title={obra.descricao}
-                      >
-                        {obra.descricao}
-                        {sortField === obra.descricao && (
-                          sortDirection === 'asc' ? <FiArrowUp size={12} /> : <FiArrowDown size={12} />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </th>
-                <th 
-                  className="sortable fixed-column" 
+                {uniqueObras.map((obra) => (
+                  <th
+                    key={obra.descricao}
+                    className="sortable obra-col obra-col-header"
+                    onClick={() => handleSort(obra.descricao)}
+                    title={obra.descricao}
+                  >
+                    {obra.descricao}
+                    {sortField === obra.descricao && (
+                      sortDirection === 'asc' ? <FiArrowUp size={12} /> : <FiArrowDown size={12} />
+                    )}
+                  </th>
+                ))}
+                <th
+                  className="sortable sticky-col sticky-col-saldo"
                   onClick={() => handleSort('estoquePosObras')}
                 >
                   Saldo Intermediário
@@ -726,10 +851,10 @@ const Obras = () => {
           <tbody>
             {error && (
               <tr>
-                <td colSpan="5" style={{ textAlign: 'center', padding: '20px', color: 'red' }}>
+                <td colSpan={4 + uniqueObras.length} style={{ textAlign: 'center', padding: '20px', color: 'red' }}>
                   Erro ao carregar dados: {error}
                   <br />
-                  <button 
+                  <button
                     onClick={() => fetchObras(currentPage, perPage)}
                     style={{ marginTop: '10px', padding: '5px 10px', cursor: 'pointer' }}
                   >
@@ -740,7 +865,7 @@ const Obras = () => {
             )}
             {sortedData.length === 0 && !loading && !error && (
               <tr>
-                <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>
+                <td colSpan={4 + uniqueObras.length} style={{ textAlign: 'center', padding: '20px' }}>
                   Nenhum item encontrado
                 </td>
               </tr>
@@ -748,39 +873,28 @@ const Obras = () => {
             {sortedData.map((item, index) => {
               return (
                 <tr key={item.codigo || index}>
-                  <td className="fixed-column">{item.codigo}</td>
-                  <td className="fixed-column">{item.descricao}</td>
-                  <td className="fixed-column">
+                  <td className="sticky-col sticky-col-codigo">{item.codigo}</td>
+                  <td className="sticky-col sticky-col-produto">{item.descricao}</td>
+                  <td className="sticky-col sticky-col-estoque">
                     <span className="status-badge badge-blue">
                       {formatNumber(item.estoqueAtual)}
                     </span>
                   </td>
-                  {/* Container scrollável para dados das obras */}
-                  <td className="obras-data-container">
-                    <div className="obras-data-scroll" onScroll={(e) => {
-                      // Sincronizar scroll com outras seções
-                      const scrollLeft = e.target.scrollLeft;
-                      document.querySelectorAll('.obras-scroll-content, .obras-header-scroll').forEach(el => {
-                        if (el !== e.target) el.scrollLeft = scrollLeft;
-                      });
-                    }}>
-                      {uniqueObras.map((obra) => {
-                        const quantidade = getObraQuantidade(item, obra.descricao);
-                        return (
-                          <div key={obra.descricao} className="obra-data-item">
-                            {quantidade > 0 ? (
-                              <span className="status-badge badge-purple">
-                                {formatNumber(quantidade)}
-                              </span>
-                            ) : (
-                              <span className="empty-cell">-</span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </td>
-                  <td className="fixed-column">
+                  {uniqueObras.map((obra) => {
+                    const quantidade = getObraQuantidade(item, obra.descricao);
+                    return (
+                      <td key={obra.descricao} className="obra-col">
+                        {quantidade > 0 ? (
+                          <span className="status-badge badge-purple">
+                            {formatNumber(quantidade)}
+                          </span>
+                        ) : (
+                          <span className="empty-cell">-</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                  <td className="sticky-col sticky-col-saldo">
                     <span className={`status-badge ${getEstoqueBadgeClass(item.estoqueAtual, item.estoquePosObras)}`}>
                       {formatNumber(item.estoquePosObras)}
                     </span>
